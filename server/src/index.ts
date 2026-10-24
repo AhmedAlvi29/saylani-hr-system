@@ -57,9 +57,9 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
+    app.listen(Number(PORT), '0.0.0.0', () => {
       console.log(`====================================================`);
-      console.log(`🚀 HCM Lite Server running on http://localhost:${PORT}`);
+      console.log(`🚀 HCM Lite Server running on http://127.0.0.1:${PORT}`);
       console.log(`🌐 Ready to serve Hackathon Evaluation requests`);
       console.log(`====================================================`);
     });

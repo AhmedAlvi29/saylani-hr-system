@@ -26,12 +26,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkSetup = async (): Promise<boolean> => {
     try {
       const data = await apiRequest<{ isSetupComplete: boolean; companyName?: string }>('/setup/status');
-      setIsSetupComplete(data.isSetupComplete);
+      const complete = Boolean(data.isSetupComplete);
+      setIsSetupComplete(complete);
       if (data.companyName) setCompanyName(data.companyName);
-      return data.isSetupComplete;
+      return complete;
     } catch (err) {
-      console.error('Failed to check setup status:', err);
-      return true;
+      console.warn('Could not verify setup status with backend:', err);
+      setIsSetupComplete(false);
+      return false;
     }
   };
 

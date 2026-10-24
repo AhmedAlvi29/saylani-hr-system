@@ -4,9 +4,9 @@ export async function connectDB(): Promise<void> {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/saylani_hcm_lite';
 
   try {
-    // Attempt standard connection with 2.5s timeout
+    // Attempt standard connection with 1.2s timeout
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 2500,
+      serverSelectionTimeoutMS: 1200,
     });
     console.log(`[Database] Connected successfully to MongoDB at: ${uri}`);
   } catch (err: any) {

@@ -13,7 +13,9 @@ export class ApiError extends Error {
 
 export async function apiRequest<T = any>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retries = 3,
+  retryDelay = 500
 ): Promise<T> {
   const token = localStorage.getItem('saylani_hcm_token');
 
@@ -28,27 +30,45 @@ export async function apiRequest<T = any>(
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-  // Handle PDF or blob downloads
-  if (response.headers.get('content-type')?.includes('application/pdf')) {
-    return (await response.blob()) as unknown as T;
+      // If backend is still starting up (502 / 503 / 504 from Vite proxy)
+      if ([502, 503, 504].includes(response.status) && attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        continue;
+      }
+
+      // Handle PDF or blob downloads
+      if (response.headers.get('content-type')?.includes('application/pdf')) {
+        return (await response.blob()) as unknown as T;
+      }
+
+      const json = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new ApiError(
+          json.message || 'An error occurred while communicating with the server.',
+          response.status,
+          json
+        );
+      }
+
+      return json.data !== undefined ? json.data : json;
+    } catch (err: any) {
+      if (attempt < retries && (err.name === 'TypeError' || err.message?.includes('fetch'))) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        continue;
+      }
+      throw err;
+    }
   }
 
-  const json = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new ApiError(
-      json.message || 'An error occurred while communicating with the server.',
-      response.status,
-      json
-    );
-  }
-
-  return json.data !== undefined ? json.data : json;
+  throw new Error('Server connection timed out.');
 }
 
 export const downloadPayslipPdf = async (payslipId: string, filename: string): Promise<void> => {
