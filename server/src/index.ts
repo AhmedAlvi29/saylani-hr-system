@@ -15,6 +15,10 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import aiRoutes from './routes/aiRoutes';
 import commsRoutes from './routes/commsRoutes';
 
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 const app = express();
