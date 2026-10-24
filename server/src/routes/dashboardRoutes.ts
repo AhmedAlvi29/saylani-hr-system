@@ -12,7 +12,7 @@ const router = Router();
 // Admin Dashboard
 router.get('/dashboard/admin', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const data = await getAdminDashboardMetrics();
+    const data = await getAdminDashboardMetrics(req.user?.companyId);
     res.json({ success: true, data });
   } catch (error) {
     next(error);
@@ -22,7 +22,7 @@ router.get('/dashboard/admin', authenticate, requireRole('admin'), async (req: R
 // HR Dashboard
 router.get('/dashboard/hr', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
-    const data = await getHrDashboardMetrics();
+    const data = await getHrDashboardMetrics(req.user?.companyId);
     res.json({ success: true, data });
   } catch (error) {
     next(error);
@@ -54,7 +54,7 @@ router.get('/dashboard/employee', authenticate, async (req: Request, res: Respon
       return;
     }
 
-    const data = await getEmployeeDashboardMetrics(employeeId);
+    const data = await getEmployeeDashboardMetrics(employeeId, req.user?.companyId);
     res.json({ success: true, data });
   } catch (error) {
     next(error);

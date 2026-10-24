@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPolicy extends Document {
+  companyId?: mongoose.Types.ObjectId;
   title: string;
   category: 'attendance' | 'leave' | 'payroll' | 'conduct' | 'general';
   content: string;
@@ -12,6 +13,7 @@ export interface IPolicy extends Document {
 
 const PolicySchema = new Schema<IPolicy>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     title: { type: String, required: true, trim: true },
     category: {
       type: String,

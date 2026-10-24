@@ -20,7 +20,7 @@ router.post('/payroll/draft', authenticate, requireRole('admin', 'hr'), async (r
   try {
     const { month } = draftSchema.parse(req.body);
 
-    const result = await generatePayrollDraft(month, req.user!.id);
+    const result = await generatePayrollDraft(month, req.user!.id, req.user?.companyId);
 
     await logAudit(req, {
       action: 'GENERATE_PAYROLL_DRAFT',
@@ -43,7 +43,8 @@ router.post('/payroll/draft', authenticate, requireRole('admin', 'hr'), async (r
 // List All Payroll Runs (HR & Admin)
 router.get('/payroll/runs', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
-    const runs = await PayrollRun.find()
+    const filter = req.user?.companyId ? { companyId: req.user.companyId } : {};
+    const runs = await PayrollRun.find(filter)
       .populate('generatedBy', 'name email')
       .populate('finalizedBy', 'name email')
       .sort({ month: -1 });
@@ -58,7 +59,10 @@ router.get('/payroll/runs', authenticate, requireRole('admin', 'hr'), async (req
 router.get('/payroll/runs/:month', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
     const month = req.params.month;
-    const run = await PayrollRun.findOne({ month })
+    const filter: any = { month };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const run = await PayrollRun.findOne(filter)
       .populate('generatedBy', 'name email')
       .populate('finalizedBy', 'name email');
 
@@ -94,7 +98,7 @@ router.get('/payroll/runs/:month', authenticate, requireRole('admin', 'hr'), asy
 router.post('/payroll/runs/:month/finalize', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
     const month = req.params.month;
-    const run = await finalizePayroll(month, req.user!.id);
+    const run = await finalizePayroll(month, req.user!.id, req.user?.companyId);
 
     await logAudit(req, {
       action: 'FINALIZE_AND_LOCK_PAYROLL',

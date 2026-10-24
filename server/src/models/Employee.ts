@@ -4,6 +4,7 @@ export type EmploymentStatus = 'active' | 'probation' | 'leaver' | 'inactive';
 export type Gender = 'male' | 'female' | 'other';
 
 export interface IEmployee extends Document {
+  companyId?: mongoose.Types.ObjectId;
   employeeCode: string;
   firstName: string;
   lastName: string;
@@ -32,10 +33,11 @@ export interface IEmployee extends Document {
 
 const EmployeeSchema = new Schema<IEmployee>(
   {
-    employeeCode: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
+    employeeCode: { type: String, required: true, uppercase: true, trim: true },
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     phone: { type: String, trim: true },
     address: { type: String, trim: true },
     departmentId: { type: Schema.Types.ObjectId, ref: 'Department', required: true },
@@ -65,6 +67,9 @@ const EmployeeSchema = new Schema<IEmployee>(
   },
   { timestamps: true }
 );
+
+EmployeeSchema.index({ companyId: 1, employeeCode: 1 });
+EmployeeSchema.index({ companyId: 1, email: 1 });
 
 // Helpful virtual for full name
 EmployeeSchema.virtual('fullName').get(function () {

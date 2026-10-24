@@ -24,6 +24,7 @@ router.post('/ai/chat', authenticate, async (req: Request, res: Response, next) 
       role: req.user!.role,
       employeeId: req.user!.employeeId,
       email: req.user!.email,
+      companyId: req.user?.companyId,
     });
 
     res.json({

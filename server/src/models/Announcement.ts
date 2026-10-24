@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAnnouncement extends Document {
+  companyId?: mongoose.Types.ObjectId;
   title: string;
   content: string;
   priority: 'normal' | 'important';
@@ -14,6 +15,7 @@ export interface IAnnouncement extends Document {
 
 const AnnouncementSchema = new Schema<IAnnouncement>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     title: { type: String, required: true, trim: true },
     content: { type: String, required: true, trim: true },
     priority: { type: String, enum: ['normal', 'important'], default: 'normal' },

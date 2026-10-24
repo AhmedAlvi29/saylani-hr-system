@@ -33,6 +33,7 @@ router.post('/attendance/check-in', authenticate, async (req: Request, res: Resp
       longitude: longitude ? parseFloat(longitude) : undefined,
       accuracy: accuracy ? parseFloat(accuracy) : undefined,
       faceVerified: Boolean(faceVerified),
+      companyId: req.user?.companyId,
     });
 
     await logAudit(req, {
@@ -65,6 +66,7 @@ router.post('/attendance/check-out', authenticate, async (req: Request, res: Res
     const record = await checkOutEmployee({
       employeeId,
       notes,
+      companyId: req.user?.companyId,
     });
 
     await logAudit(req, {
@@ -106,7 +108,7 @@ router.get('/attendance/today', authenticate, async (req: Request, res: Response
 router.get('/attendance/board', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
     const { date, departmentId } = req.query;
-    const board = await getDailyAttendanceBoard(date as string, departmentId as string);
+    const board = await getDailyAttendanceBoard(date as string, departmentId as string, req.user?.companyId);
     res.json({ success: true, data: board });
   } catch (error) {
     next(error);
@@ -119,6 +121,10 @@ router.get('/attendance/history', authenticate, enforceDataScope, async (req: Re
     const { employeeId, startDate, endDate, month } = req.query;
 
     const filter: any = {};
+    if (req.user?.companyId) {
+      filter.companyId = req.user.companyId;
+    }
+
     if (req.user?.role === 'employee') {
       filter.employeeId = req.user.employeeId;
     } else if (employeeId) {
@@ -187,7 +193,10 @@ router.post('/attendance/correction', authenticate, async (req: Request, res: Re
 // Pending Corrections List (Admin & HR)
 router.get('/attendance/corrections', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
-    const corrections = await Attendance.find({ 'correction.status': 'pending' })
+    const filter: any = { 'correction.status': 'pending' };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const corrections = await Attendance.find(filter)
       .populate('employeeId', 'firstName lastName employeeCode departmentId')
       .sort({ updatedAt: -1 });
 

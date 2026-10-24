@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPayslip extends Document {
+  companyId?: mongoose.Types.ObjectId;
   payrollRunId: mongoose.Types.ObjectId;
   employeeId: mongoose.Types.ObjectId;
   month: string; // "YYYY-MM"
@@ -34,6 +35,7 @@ export interface IPayslip extends Document {
 
 const PayslipSchema = new Schema<IPayslip>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     payrollRunId: { type: Schema.Types.ObjectId, ref: 'PayrollRun', required: true, index: true },
     employeeId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true, index: true },
     month: { type: String, required: true, index: true },
@@ -65,6 +67,7 @@ const PayslipSchema = new Schema<IPayslip>(
   { timestamps: true }
 );
 
+PayslipSchema.index({ companyId: 1, month: 1 });
 PayslipSchema.index({ payrollRunId: 1, employeeId: 1 }, { unique: true });
 PayslipSchema.index({ employeeId: 1, month: 1 }, { unique: true });
 

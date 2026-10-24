@@ -22,7 +22,7 @@ router.get('/leaves/calculate-days', authenticate, async (req: Request, res: Res
       res.status(400).json({ success: false, message: 'startDate and endDate are required.' });
       return;
     }
-    const result = await calculateWorkingDays(startDate as string, endDate as string);
+    const result = await calculateWorkingDays(startDate as string, endDate as string, req.user?.companyId);
     res.json({ success: true, data: result });
   } catch (error) {
     next(error);
@@ -53,6 +53,7 @@ router.post('/leaves/apply', authenticate, async (req: Request, res: Response, n
       startDate: data.startDate,
       endDate: data.endDate,
       reason: data.reason,
+      companyId: req.user?.companyId,
     });
 
     await logAudit(req, {
@@ -82,7 +83,10 @@ router.get('/leaves/my-history', authenticate, async (req: Request, res: Respons
       return;
     }
 
-    const requests = await LeaveRequest.find({ employeeId }).sort({ createdAt: -1 });
+    const filter: any = { employeeId };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const requests = await LeaveRequest.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, data: requests });
   } catch (error) {
     next(error);
@@ -99,7 +103,7 @@ router.get('/leaves/balance', authenticate, enforceDataScope, async (req: Reques
     }
 
     const year = req.query.year ? parseInt(req.query.year as string, 10) : new Date().getFullYear();
-    const balance = await getOrCreateLeaveBalance(employeeId as string, year);
+    const balance = await getOrCreateLeaveBalance(employeeId as string, year, req.user?.companyId);
 
     res.json({
       success: true,
@@ -123,6 +127,7 @@ router.get('/leaves/requests', authenticate, requireRole('admin', 'hr'), async (
   try {
     const { status, leaveType } = req.query;
     const filter: any = {};
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
     if (status) filter.status = status;
     if (leaveType) filter.leaveType = leaveType;
 

@@ -19,6 +19,7 @@ export const checkInEmployee = async (params: {
   longitude?: number;
   accuracy?: number;
   faceVerified?: boolean;
+  companyId?: string;
 }) => {
   const todayStr = getTodayDateString();
   const now = new Date();
@@ -35,8 +36,10 @@ export const checkInEmployee = async (params: {
     throw error;
   }
 
-  // 2. Fetch company settings for timing & geofence
-  const company = await Company.findOne();
+  // 2. Fetch employee & company settings for timing & geofence
+  const employee = await Employee.findById(params.employeeId);
+  const companyId = params.companyId || employee?.companyId?.toString();
+  const company = companyId ? await Company.findById(companyId) : await Company.findOne();
   const officeStartTime = company?.officeStartTime || '09:00';
   const graceMinutes = company?.graceMinutes ?? 15;
 
@@ -96,6 +99,7 @@ export const checkInEmployee = async (params: {
   const initialStatus: AttendanceStatus = isLate ? 'late' : 'present';
 
   const attendance = await Attendance.create({
+    companyId: company?._id || employee?.companyId,
     employeeId: params.employeeId,
     date: todayStr,
     checkInTime: now,
@@ -114,6 +118,7 @@ export const checkInEmployee = async (params: {
 export const checkOutEmployee = async (params: {
   employeeId: string;
   notes?: string;
+  companyId?: string;
 }) => {
   const todayStr = getTodayDateString();
   const now = new Date();
@@ -140,7 +145,8 @@ export const checkOutEmployee = async (params: {
   record.workingHours = hours;
 
   // Check half day threshold
-  const company = await Company.findOne();
+  const compId = record.companyId || params.companyId;
+  const company = compId ? await Company.findById(compId) : await Company.findOne();
   const halfDayThreshold = company?.halfDayThresholdHours ?? 5;
 
   if (hours < halfDayThreshold) {
@@ -155,13 +161,16 @@ export const checkOutEmployee = async (params: {
   return record;
 };
 
-export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: string) => {
+export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: string, companyId?: string) => {
   const targetDate = dateStr || getTodayDateString();
 
   // Find all active/probation employees
   const employeeFilter: any = {
     employmentStatus: { $in: ['active', 'probation'] },
   };
+  if (companyId) {
+    employeeFilter.companyId = companyId;
+  }
   if (departmentId) {
     employeeFilter.departmentId = departmentId;
   }
@@ -172,18 +181,22 @@ export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: s
     .lean();
 
   // Find all attendance records for targetDate
-  const attendanceRecords = await Attendance.find({ date: targetDate }).lean();
+  const attFilter: any = { date: targetDate };
+  if (companyId) attFilter.companyId = companyId;
+  const attendanceRecords = await Attendance.find(attFilter).lean();
   const attendanceMap = new Map<string, any>();
   attendanceRecords.forEach((att) => {
     attendanceMap.set(att.employeeId.toString(), att);
   });
 
   // Find approved leaves covering targetDate
-  const approvedLeaves = await LeaveRequest.find({
+  const leaveFilter: any = {
     status: 'approved',
     startDate: { $lte: targetDate },
     endDate: { $gte: targetDate },
-  }).lean();
+  };
+  if (companyId) leaveFilter.companyId = companyId;
+  const approvedLeaves = await LeaveRequest.find(leaveFilter).lean();
   const leaveMap = new Map<string, any>();
   approvedLeaves.forEach((leave) => {
     leaveMap.set(leave.employeeId.toString(), leave);
@@ -248,7 +261,9 @@ export const requestCorrection = async (params: {
 
   if (!record) {
     // Create placeholder attendance record if none exists
+    const emp = await Employee.findById(params.employeeId);
     record = new Attendance({
+      companyId: emp?.companyId,
       employeeId: params.employeeId,
       date: params.date,
       status: 'absent',

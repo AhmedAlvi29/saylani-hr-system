@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export type PayrollStatus = 'draft' | 'finalized';
 
 export interface IPayrollRun extends Document {
+  companyId?: mongoose.Types.ObjectId;
   month: string; // "YYYY-MM"
   year: number;
   workingDays: number;
@@ -22,7 +23,8 @@ export interface IPayrollRun extends Document {
 
 const PayrollRunSchema = new Schema<IPayrollRun>(
   {
-    month: { type: String, required: true, unique: true, index: true }, // "YYYY-MM"
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
+    month: { type: String, required: true, index: true }, // "YYYY-MM"
     year: { type: Number, required: true },
     workingDays: { type: Number, required: true },
     status: { type: String, enum: ['draft', 'finalized'], default: 'draft' },
@@ -38,5 +40,7 @@ const PayrollRunSchema = new Schema<IPayrollRun>(
   },
   { timestamps: true }
 );
+
+PayrollRunSchema.index({ companyId: 1, month: 1 });
 
 export const PayrollRun = mongoose.model<IPayrollRun>('PayrollRun', PayrollRunSchema);

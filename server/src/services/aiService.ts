@@ -24,15 +24,17 @@ if (apiKey) {
 export const executeAiTool = async (
   toolName: string,
   args: any,
-  user: { id: string; role: string; employeeId?: string; email: string }
+  user: { id: string; role: string; employeeId?: string; email: string; companyId?: string }
 ): Promise<any> => {
   const todayStr = getTodayDateString();
+  const cFilter: any = user.companyId ? { companyId: user.companyId } : {};
 
   switch (toolName) {
     case 'get_headcount': {
-      let filter: any = { employmentStatus: { $in: ['active', 'probation'] } };
+      let filter: any = { ...cFilter, employmentStatus: { $in: ['active', 'probation'] } };
       if (args.department) {
         const dept = await Department.findOne({
+          ...cFilter,
           $or: [
             { name: { $regex: args.department, $options: 'i' } },
             { code: { $regex: args.department, $options: 'i' } },
@@ -48,14 +50,16 @@ export const executeAiTool = async (
 
     case 'get_attendance_summary': {
       const date = args.date || todayStr;
-      const records = await Attendance.find({ date });
+      const records = await Attendance.find({ ...cFilter, date });
       const present = records.filter((r) => r.status === 'present').length;
       const late = records.filter((r) => r.status === 'late').length;
       const halfDay = records.filter((r) => r.status === 'half_day').length;
       const totalEmployees = await Employee.countDocuments({
+        ...cFilter,
         employmentStatus: { $in: ['active', 'probation'] },
       });
       const onLeave = await LeaveRequest.countDocuments({
+        ...cFilter,
         status: 'approved',
         startDate: { $lte: date },
         endDate: { $gte: date },
@@ -80,8 +84,11 @@ export const executeAiTool = async (
 
     case 'get_late_comers': {
       const monthStart = `${(args.month || todayStr).substring(0, 7)}-01`;
+      const lateMatch: any = { date: { $gte: monthStart, $lte: todayStr }, status: 'late' };
+      if (user.companyId) lateMatch.companyId = user.companyId;
+
       const lateAgg = await Attendance.aggregate([
-        { $match: { date: { $gte: monthStart, $lte: todayStr }, status: 'late' } },
+        { $match: lateMatch },
         { $group: { _id: '$employeeId', lateCount: { $sum: 1 }, totalLateMinutes: { $sum: '$lateMinutes' } } },
         { $sort: { lateCount: -1 } },
         { $limit: args.limit || 5 },
@@ -103,9 +110,10 @@ export const executeAiTool = async (
     }
 
     case 'get_leave_summary': {
-      const pendingCount = await LeaveRequest.countDocuments({ status: 'pending' });
-      const approvedCount = await LeaveRequest.countDocuments({ status: 'approved' });
+      const pendingCount = await LeaveRequest.countDocuments({ ...cFilter, status: 'pending' });
+      const approvedCount = await LeaveRequest.countDocuments({ ...cFilter, status: 'approved' });
       const todayLeaves = await LeaveRequest.find({
+        ...cFilter,
         status: 'approved',
         startDate: { $lte: todayStr },
         endDate: { $gte: todayStr },
@@ -158,7 +166,7 @@ export const executeAiTool = async (
         };
       }
       const month = args.month || todayStr.substring(0, 7);
-      const run = await PayrollRun.findOne({ month });
+      const run = await PayrollRun.findOne({ month, ...cFilter });
       if (!run) {
         return { message: `No payroll generated for month ${month}.` };
       }
@@ -177,6 +185,7 @@ export const executeAiTool = async (
       // Employees can only search basic directory info (name, department, designation), NEVER salaries
       const query = args.query || '';
       const filter: any = {
+        ...cFilter,
         employmentStatus: { $in: ['active', 'probation'] },
         $or: [
           { firstName: { $regex: query, $options: 'i' } },
@@ -210,7 +219,7 @@ export const executeAiTool = async (
 // Main Chat Controller
 export const askAiAssistant = async (
   prompt: string,
-  user: { id: string; role: string; employeeId?: string; email: string }
+  user: { id: string; role: string; employeeId?: string; email: string; companyId?: string }
 ): Promise<{ answer: string; isAiGenerated: boolean; toolCalls?: any[] }> => {
   const startTime = Date.now();
   let toolCallsUsed: any[] = [];
@@ -263,7 +272,7 @@ export const askAiAssistant = async (
 // Resilient Heuristic Engine: Reads real database records and answers naturally!
 const fallbackHeuristicEngine = async (
   prompt: string,
-  user: { id: string; role: string; employeeId?: string; email: string }
+  user: { id: string; role: string; employeeId?: string; email: string; companyId?: string }
 ): Promise<string> => {
   const p = prompt.toLowerCase();
 
@@ -325,7 +334,9 @@ const fallbackHeuristicEngine = async (
   }
 
   // 5. Policy Q&A
-  const policies = await Policy.find({ isActive: true });
+  const polFilter: any = { isActive: true };
+  if (user.companyId) polFilter.companyId = user.companyId;
+  const policies = await Policy.find(polFilter);
   for (const pol of policies) {
     if (p.includes('policy') || p.includes('rule') || p.includes('hours') || p.includes('grace')) {
       return `According to the **${pol.title}**:\n${pol.content}`;
@@ -338,7 +349,7 @@ const fallbackHeuristicEngine = async (
 // Call Gemini API with Tool Declarations
 const callGeminiWithTools = async (
   prompt: string,
-  user: { id: string; role: string; employeeId?: string; email: string }
+  user: { id: string; role: string; employeeId?: string; email: string; companyId?: string }
 ) => {
   if (!aiClient) throw new Error('No AI client initialized');
 
@@ -466,6 +477,7 @@ const recordAiLog = async (
       return; // Skip DB logging if database is not connected (e.g. during offline unit tests)
     }
     await AiLog.create({
+      companyId: user.companyId ? new mongoose.default.Types.ObjectId(user.companyId) : undefined,
       userId: user.id,
       userEmail: user.email,
       userRole: user.role,

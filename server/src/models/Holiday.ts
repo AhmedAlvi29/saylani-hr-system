@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IHoliday extends Document {
+  companyId?: mongoose.Types.ObjectId;
   name: string;
   date: string; // YYYY-MM-DD
   isRecurring: boolean;
@@ -12,6 +13,7 @@ export interface IHoliday extends Document {
 
 const HolidaySchema = new Schema<IHoliday>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     name: { type: String, required: true, trim: true },
     date: { type: String, required: true }, // Format "YYYY-MM-DD"
     isRecurring: { type: Boolean, default: false },
@@ -21,6 +23,6 @@ const HolidaySchema = new Schema<IHoliday>(
   { timestamps: true }
 );
 
-HolidaySchema.index({ date: 1 }, { unique: true });
+HolidaySchema.index({ companyId: 1, date: 1 });
 
 export const Holiday = mongoose.model<IHoliday>('Holiday', HolidaySchema);

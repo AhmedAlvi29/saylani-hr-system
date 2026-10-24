@@ -15,7 +15,7 @@ const router = Router();
 // Company Settings
 router.get('/org/settings', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const company = await Company.findOne();
+    const company = req.user?.companyId ? await Company.findById(req.user.companyId) : await Company.findOne();
     res.json({ success: true, data: company });
   } catch (error) {
     next(error);
@@ -40,7 +40,7 @@ const updateSettingsSchema = z.object({
 router.put('/org/settings', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
     const data = updateSettingsSchema.parse(req.body);
-    const company = await Company.findOne();
+    const company = req.user?.companyId ? await Company.findById(req.user.companyId) : await Company.findOne();
     if (!company) {
       res.status(404).json({ success: false, message: 'Company settings not found.' });
       return;
@@ -68,7 +68,8 @@ router.put('/org/settings', authenticate, requireRole('admin'), async (req: Requ
 // Departments
 router.get('/org/departments', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const departments = await Department.find().sort({ name: 1 });
+    const filter = req.user?.companyId ? { companyId: req.user.companyId } : {};
+    const departments = await Department.find(filter).sort({ name: 1 });
     res.json({ success: true, data: departments });
   } catch (error) {
     next(error);
@@ -84,7 +85,10 @@ router.post('/org/departments', authenticate, requireRole('admin'), async (req: 
     });
     const data = schema.parse(req.body);
 
-    const department = await Department.create(data);
+    const department = await Department.create({
+      ...data,
+      companyId: req.user?.companyId,
+    });
 
     await logAudit(req, {
       action: 'CREATE_DEPARTMENT',
@@ -103,7 +107,8 @@ router.post('/org/departments', authenticate, requireRole('admin'), async (req: 
 // Designations
 router.get('/org/designations', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const designations = await Designation.find().populate('departmentId', 'name code').sort({ title: 1 });
+    const filter = req.user?.companyId ? { companyId: req.user.companyId } : {};
+    const designations = await Designation.find(filter).populate('departmentId', 'name code').sort({ title: 1 });
     res.json({ success: true, data: designations });
   } catch (error) {
     next(error);
@@ -119,7 +124,10 @@ router.post('/org/designations', authenticate, requireRole('admin'), async (req:
     });
     const data = schema.parse(req.body);
 
-    const designation = await Designation.create(data);
+    const designation = await Designation.create({
+      ...data,
+      companyId: req.user?.companyId,
+    });
 
     await logAudit(req, {
       action: 'CREATE_DESIGNATION',
@@ -138,7 +146,8 @@ router.post('/org/designations', authenticate, requireRole('admin'), async (req:
 // Holidays
 router.get('/org/holidays', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const holidays = await Holiday.find().sort({ date: 1 });
+    const filter = req.user?.companyId ? { companyId: req.user.companyId } : {};
+    const holidays = await Holiday.find(filter).sort({ date: 1 });
     res.json({ success: true, data: holidays });
   } catch (error) {
     next(error);
@@ -155,7 +164,10 @@ router.post('/org/holidays', authenticate, requireRole('admin'), async (req: Req
     });
     const data = schema.parse(req.body);
 
-    const holiday = await Holiday.create(data);
+    const holiday = await Holiday.create({
+      ...data,
+      companyId: req.user?.companyId,
+    });
 
     await logAudit(req, {
       action: 'CREATE_HOLIDAY',
@@ -173,7 +185,10 @@ router.post('/org/holidays', authenticate, requireRole('admin'), async (req: Req
 
 router.delete('/org/holidays/:id', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const holiday = await Holiday.findByIdAndDelete(req.params.id);
+    const filter: any = { _id: req.params.id };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const holiday = await Holiday.findOneAndDelete(filter);
     if (!holiday) {
       res.status(404).json({ success: false, message: 'Holiday not found.' });
       return;
@@ -195,7 +210,8 @@ router.delete('/org/holidays/:id', authenticate, requireRole('admin'), async (re
 // System Users Management (Admin creates HR logins, resets passwords, deactivates)
 router.get('/org/users', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const users = await User.find().populate('employeeId', 'employeeCode firstName lastName').sort({ createdAt: -1 });
+    const filter = req.user?.companyId ? { companyId: req.user.companyId } : {};
+    const users = await User.find(filter).populate('employeeId', 'employeeCode firstName lastName').sort({ createdAt: -1 });
     res.json({ success: true, data: users });
   } catch (error) {
     next(error);
@@ -220,6 +236,7 @@ router.post('/org/users', authenticate, requireRole('admin'), async (req: Reques
 
     const passwordHash = await hashPassword(data.password);
     const user = await User.create({
+      companyId: req.user?.companyId,
       name: data.name,
       email: data.email.toLowerCase(),
       passwordHash,
@@ -247,7 +264,10 @@ router.post('/org/users', authenticate, requireRole('admin'), async (req: Reques
 
 router.patch('/org/users/:id/toggle', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const user = await User.findById(req.params.id);
+    const filter: any = { _id: req.params.id };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const user = await User.findOne(filter);
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found.' });
       return;
@@ -276,7 +296,10 @@ router.post('/org/users/:id/reset-password', authenticate, requireRole('admin'),
     });
     const { newPassword } = schema.parse(req.body);
 
-    const user = await User.findById(req.params.id);
+    const filter: any = { _id: req.params.id };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const user = await User.findOne(filter);
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found.' });
       return;

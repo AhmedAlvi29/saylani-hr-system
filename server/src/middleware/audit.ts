@@ -21,6 +21,7 @@ export const logAudit = async (req: Request, options: AuditOptions): Promise<voi
     const userAgent = req.headers['user-agent'] || 'Unknown';
 
     await AuditLog.create({
+      companyId: req.user?.companyId ? new mongoose.Types.ObjectId(req.user.companyId) : undefined,
       actorId,
       actorEmail,
       actorRole,

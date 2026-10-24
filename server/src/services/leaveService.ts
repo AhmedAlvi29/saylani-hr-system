@@ -7,11 +7,14 @@ import { Employee } from '../models/Employee';
 
 export const getOrCreateLeaveBalance = async (
   employeeId: string,
-  year: number = new Date().getFullYear()
+  year: number = new Date().getFullYear(),
+  companyId?: string
 ): Promise<ILeaveBalance> => {
   let balance = await LeaveBalance.findOne({ employeeId, year });
   if (!balance) {
+    const emp = await Employee.findById(employeeId);
     balance = await LeaveBalance.create({
+      companyId: companyId || emp?.companyId,
       employeeId,
       year,
       annualQuota: 14,
@@ -29,15 +32,19 @@ export const getOrCreateLeaveBalance = async (
 // Calculate working days between startDate and endDate, excluding weekends and public holidays
 export const calculateWorkingDays = async (
   startDateStr: string,
-  endDateStr: string
+  endDateStr: string,
+  companyId?: string
 ): Promise<{ workingDays: number; holidaysEncountered: string[]; weekendsEncountered: number }> => {
-  const company = await Company.findOne();
+  const company = companyId ? await Company.findById(companyId) : await Company.findOne();
   const weekendDays = company?.weekendDays || [0, 6]; // 0 = Sun, 6 = Sat
 
   // Fetch all public holidays between start and end date
-  const holidays = await Holiday.find({
+  const holidayFilter: any = {
     date: { $gte: startDateStr, $lte: endDateStr },
-  }).lean();
+  };
+  if (companyId) holidayFilter.companyId = companyId;
+
+  const holidays = await Holiday.find(holidayFilter).lean();
   const holidayDateSet = new Set(holidays.map((h) => h.date));
 
   const start = new Date(startDateStr);
@@ -78,9 +85,13 @@ export const applyForLeave = async (params: {
   startDate: string;
   endDate: string;
   reason: string;
+  companyId?: string;
 }) => {
+  const employee = await Employee.findById(params.employeeId);
+  const compId = params.companyId || employee?.companyId?.toString();
+
   // 1. Calculate working days
-  const { workingDays } = await calculateWorkingDays(params.startDate, params.endDate);
+  const { workingDays } = await calculateWorkingDays(params.startDate, params.endDate, compId);
   if (workingDays <= 0) {
     const error: any = new Error(
       'The selected date range contains only weekends or public holidays (0 working days).'
@@ -108,7 +119,7 @@ export const applyForLeave = async (params: {
 
   // 3. Balance verification
   const year = new Date(params.startDate).getFullYear();
-  const balance = await getOrCreateLeaveBalance(params.employeeId, year);
+  const balance = await getOrCreateLeaveBalance(params.employeeId, year, compId);
 
   if (params.leaveType !== 'unpaid') {
     let availableQuota = 0;
@@ -131,6 +142,7 @@ export const applyForLeave = async (params: {
 
   // 4. Create request
   const request = await LeaveRequest.create({
+    companyId: compId || employee?.companyId,
     employeeId: params.employeeId,
     leaveType: params.leaveType,
     startDate: params.startDate,

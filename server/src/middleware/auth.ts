@@ -8,6 +8,7 @@ export interface AuthenticatedUser {
   role: UserRole;
   employeeId?: string;
   name: string;
+  companyId?: string;
   mustChangePassword?: boolean;
 }
 
@@ -49,6 +50,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       role: user.role,
       employeeId: user.employeeId?.toString(),
       name: user.name,
+      companyId: user.companyId ? user.companyId.toString() : undefined,
       mustChangePassword: user.mustChangePassword,
     };
 

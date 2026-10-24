@@ -9,13 +9,19 @@ import { AuditLog } from '../models/AuditLog';
 import { Announcement } from '../models/Announcement';
 import { getTodayDateString } from './attendanceService';
 
-export const getAdminDashboardMetrics = async () => {
+export const getAdminDashboardMetrics = async (companyId?: string) => {
   const todayStr = getTodayDateString();
   const currentYear = new Date().getFullYear();
 
+  const cFilter = companyId ? { companyId } : {};
+
   // 1. Headcount & Attrition
-  const activeCount = await Employee.countDocuments({ employmentStatus: { $in: ['active', 'probation'] } });
+  const activeCount = await Employee.countDocuments({
+    ...cFilter,
+    employmentStatus: { $in: ['active', 'probation'] },
+  });
   const exitedThisYear = await Employee.countDocuments({
+    ...cFilter,
     employmentStatus: 'leaver',
     exitDate: { $gte: new Date(`${currentYear}-01-01`) },
   });
@@ -23,17 +29,18 @@ export const getAdminDashboardMetrics = async () => {
   const attritionRate = Math.round((exitedThisYear / avgHeadcount) * 100 * 10) / 10;
 
   // 2. Payroll Cost & Average Salary
-  const latestFinalizedRun = await PayrollRun.findOne({ status: 'finalized' }).sort({ month: -1 });
-  const latestAnyRun = latestFinalizedRun || (await PayrollRun.findOne().sort({ month: -1 }));
+  const latestFinalizedRun = await PayrollRun.findOne({ ...cFilter, status: 'finalized' }).sort({ month: -1 });
+  const latestAnyRun = latestFinalizedRun || (await PayrollRun.findOne(cFilter).sort({ month: -1 }));
 
   const totalPayrollCost = latestAnyRun?.totalGross || 0;
   const avgSalary = activeCount > 0 ? Math.round(totalPayrollCost / activeCount) : 0;
 
   // 3. Headcount by Department
-  const departments = await Department.find({ isActive: true }).lean();
+  const departments = await Department.find({ ...cFilter, isActive: true }).lean();
   const deptHeadcounts = await Promise.all(
     departments.map(async (dept) => {
       const count = await Employee.countDocuments({
+        ...cFilter,
         departmentId: dept._id,
         employmentStatus: { $in: ['active', 'probation'] },
       });
@@ -49,6 +56,7 @@ export const getAdminDashboardMetrics = async () => {
   const deptPayroll = await Promise.all(
     departments.map(async (dept) => {
       const emps = await Employee.find({
+        ...cFilter,
         departmentId: dept._id,
         employmentStatus: { $in: ['active', 'probation'] },
       });
@@ -61,8 +69,8 @@ export const getAdminDashboardMetrics = async () => {
   );
 
   // 5. Gender & Tenure Breakdown
-  const maleCount = await Employee.countDocuments({ gender: 'male', employmentStatus: { $in: ['active', 'probation'] } });
-  const femaleCount = await Employee.countDocuments({ gender: 'female', employmentStatus: { $in: ['active', 'probation'] } });
+  const maleCount = await Employee.countDocuments({ ...cFilter, gender: 'male', employmentStatus: { $in: ['active', 'probation'] } });
+  const femaleCount = await Employee.countDocuments({ ...cFilter, gender: 'female', employmentStatus: { $in: ['active', 'probation'] } });
   const otherGenderCount = activeCount - maleCount - femaleCount;
 
   // Tenure breakdown: < 1 yr, 1-3 yrs, 3+ yrs
@@ -72,20 +80,23 @@ export const getAdminDashboardMetrics = async () => {
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
 
   const under1Year = await Employee.countDocuments({
+    ...cFilter,
     joiningDate: { $gt: oneYearAgo },
     employmentStatus: { $in: ['active', 'probation'] },
   });
   const oneToThreeYears = await Employee.countDocuments({
+    ...cFilter,
     joiningDate: { $lte: oneYearAgo, $gt: threeYearsAgo },
     employmentStatus: { $in: ['active', 'probation'] },
   });
   const overThreeYears = await Employee.countDocuments({
+    ...cFilter,
     joiningDate: { $lte: threeYearsAgo },
     employmentStatus: { $in: ['active', 'probation'] },
   });
 
   // 6. Recent Audit Logs
-  const recentAuditLogs = await AuditLog.find().sort({ createdAt: -1 }).limit(10).lean();
+  const recentAuditLogs = await AuditLog.find(cFilter).sort({ createdAt: -1 }).limit(10).lean();
 
   return {
     kpis: {
@@ -114,29 +125,35 @@ export const getAdminDashboardMetrics = async () => {
   };
 };
 
-export const getHrDashboardMetrics = async () => {
+export const getHrDashboardMetrics = async (companyId?: string) => {
   const todayStr = getTodayDateString();
   const currentYear = new Date().getFullYear();
 
+  const cFilter = companyId ? { companyId } : {};
+
   // 1. Headcount
-  const activeCount = await Employee.countDocuments({ employmentStatus: { $in: ['active', 'probation'] } });
+  const activeCount = await Employee.countDocuments({
+    ...cFilter,
+    employmentStatus: { $in: ['active', 'probation'] },
+  });
 
   // 2. Today's attendance numbers
-  const todayAttendance = await Attendance.find({ date: todayStr });
+  const todayAttendance = await Attendance.find({ ...cFilter, date: todayStr });
   const presentToday = todayAttendance.filter((a) => a.status === 'present').length;
   const lateToday = todayAttendance.filter((a) => a.status === 'late').length;
   const halfDayToday = todayAttendance.filter((a) => a.status === 'half_day').length;
 
   // On leave today
   const onLeaveToday = await LeaveRequest.countDocuments({
+    ...cFilter,
     status: 'approved',
     startDate: { $lte: todayStr },
     endDate: { $gte: todayStr },
   });
 
   // Pending approvals
-  const pendingLeaves = await LeaveRequest.countDocuments({ status: 'pending' });
-  const pendingCorrections = await Attendance.countDocuments({ 'correction.status': 'pending' });
+  const pendingLeaves = await LeaveRequest.countDocuments({ ...cFilter, status: 'pending' });
+  const pendingCorrections = await Attendance.countDocuments({ ...cFilter, 'correction.status': 'pending' });
   const totalPendingApprovals = pendingLeaves + pendingCorrections;
 
   // 3. Attendance Trend (last 14 days)
@@ -146,11 +163,12 @@ export const getHrDashboardMetrics = async () => {
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
 
-    const records = await Attendance.find({ date: dateStr });
+    const records = await Attendance.find({ ...cFilter, date: dateStr });
     const p = records.filter((r) => r.status === 'present').length;
     const l = records.filter((r) => r.status === 'late').length;
     const hd = records.filter((r) => r.status === 'half_day').length;
     const leave = await LeaveRequest.countDocuments({
+      ...cFilter,
       status: 'approved',
       startDate: { $lte: dateStr },
       endDate: { $gte: dateStr },
@@ -167,10 +185,11 @@ export const getHrDashboardMetrics = async () => {
   }
 
   // 4. Absenteeism by Department
-  const departments = await Department.find({ isActive: true }).lean();
+  const departments = await Department.find({ ...cFilter, isActive: true }).lean();
   const absenteeismByDept = await Promise.all(
     departments.map(async (dept) => {
       const empCount = await Employee.countDocuments({
+        ...cFilter,
         departmentId: dept._id,
         employmentStatus: { $in: ['active', 'probation'] },
       });
@@ -184,15 +203,19 @@ export const getHrDashboardMetrics = async () => {
   );
 
   // 5. Leave utilization by Type
+  const leaveMatch: any = { status: 'approved' };
+  if (companyId) leaveMatch.companyId = companyId;
   const leavesByType = await LeaveRequest.aggregate([
-    { $match: { status: 'approved' } },
+    { $match: leaveMatch },
     { $group: { _id: '$leaveType', totalDays: { $sum: '$workingDays' }, count: { $sum: 1 } } },
   ]);
 
   // 6. Top 5 late-comers this month
   const monthStart = `${todayStr.substring(0, 7)}-01`;
+  const lateMatch: any = { date: { $gte: monthStart, $lte: todayStr }, status: 'late' };
+  if (companyId) lateMatch.companyId = companyId;
   const lateAgg = await Attendance.aggregate([
-    { $match: { date: { $gte: monthStart, $lte: todayStr }, status: 'late' } },
+    { $match: lateMatch },
     { $group: { _id: '$employeeId', lateCount: { $sum: 1 }, totalLateMinutes: { $sum: '$lateMinutes' } } },
     { $sort: { lateCount: -1 } },
     { $limit: 5 },
@@ -232,7 +255,7 @@ export const getHrDashboardMetrics = async () => {
   };
 };
 
-export const getEmployeeDashboardMetrics = async (employeeId: string) => {
+export const getEmployeeDashboardMetrics = async (employeeId: string, companyId?: string) => {
   const todayStr = getTodayDateString();
   const currentYear = new Date().getFullYear();
 
@@ -266,7 +289,9 @@ export const getEmployeeDashboardMetrics = async (employeeId: string) => {
   // 4. Leave Balance
   let leaveBalance = await LeaveBalance.findOne({ employeeId, year: currentYear });
   if (!leaveBalance) {
+    const emp = await Employee.findById(employeeId);
     leaveBalance = await LeaveBalance.create({
+      companyId: companyId || emp?.companyId,
       employeeId,
       year: currentYear,
       annualQuota: 14,
@@ -281,7 +306,9 @@ export const getEmployeeDashboardMetrics = async (employeeId: string) => {
     .lean();
 
   // 6. Recent Active Announcements
-  const announcements = await Announcement.find({ isActive: true })
+  const annFilter: any = { isActive: true };
+  if (companyId) annFilter.companyId = companyId;
+  const announcements = await Announcement.find(annFilter)
     .sort({ createdAt: -1 })
     .limit(5)
     .lean();

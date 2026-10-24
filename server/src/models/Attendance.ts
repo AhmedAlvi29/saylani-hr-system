@@ -5,6 +5,7 @@ export type AttendanceSource = 'web' | 'camera';
 export type CorrectionStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export interface IAttendance extends Document {
+  companyId?: mongoose.Types.ObjectId;
   employeeId: mongoose.Types.ObjectId;
   date: string; // "YYYY-MM-DD"
   checkInTime?: Date;
@@ -38,6 +39,7 @@ export interface IAttendance extends Document {
 
 const AttendanceSchema = new Schema<IAttendance>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     employeeId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true, index: true },
     date: { type: String, required: true, index: true }, // "YYYY-MM-DD"
     checkInTime: { type: Date },
@@ -74,7 +76,8 @@ const AttendanceSchema = new Schema<IAttendance>(
   { timestamps: true }
 );
 
-// Enforce unique compound index: one attendance record per employee per day
-AttendanceSchema.index({ employeeId: 1, date: 1 }, { unique: true });
+AttendanceSchema.index({ companyId: 1, date: 1 });
+AttendanceSchema.index({ companyId: 1, status: 1 });
+AttendanceSchema.index({ companyId: 1, employeeId: 1, date: 1 });
 
 export const Attendance = mongoose.model<IAttendance>('Attendance', AttendanceSchema);

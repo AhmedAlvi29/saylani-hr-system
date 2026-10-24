@@ -21,6 +21,9 @@ router.get('/employees', authenticate, enforceDataScope, async (req: Request, re
     const { search, department, status, page = 1, limit = 20 } = req.query;
 
     const query: any = {};
+    if (req.user?.companyId) {
+      query.companyId = req.user.companyId;
+    }
 
     // If role is employee, force own employeeId
     if (req.user?.role === 'employee') {
@@ -80,7 +83,10 @@ router.get('/employees/:id', authenticate, enforceDataScope, async (req: Request
       return;
     }
 
-    const employee = await Employee.findById(employeeId)
+    const filter: any = { _id: employeeId };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const employee = await Employee.findOne(filter)
       .populate('departmentId', 'name code')
       .populate('designationId', 'title')
       .populate('userId', 'email role isActive lastLogin mustChangePassword');
@@ -135,7 +141,10 @@ router.post('/employees', authenticate, requireRole('admin', 'hr'), async (req: 
     const data = registerEmployeeSchema.parse(req.body);
 
     // 1. Duplicate check
-    const existingCode = await Employee.findOne({ employeeCode: data.employeeCode });
+    const codeFilter: any = { employeeCode: data.employeeCode };
+    if (req.user?.companyId) codeFilter.companyId = req.user.companyId;
+
+    const existingCode = await Employee.findOne(codeFilter);
     if (existingCode) {
       res.status(409).json({ success: false, message: `Employee code ${data.employeeCode} already exists.` });
       return;
@@ -156,6 +165,7 @@ router.post('/employees', authenticate, requireRole('admin', 'hr'), async (req: 
     // 3. Create User Login with temporary password
     const passwordHash = await hashPassword(data.temporaryPassword);
     const user = await User.create({
+      companyId: req.user?.companyId,
       name: `${data.firstName} ${data.lastName}`,
       email: data.email.toLowerCase(),
       passwordHash,
@@ -166,6 +176,7 @@ router.post('/employees', authenticate, requireRole('admin', 'hr'), async (req: 
 
     // 4. Create Employee record
     const employee = await Employee.create({
+      companyId: req.user?.companyId,
       employeeCode: data.employeeCode,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -219,7 +230,10 @@ router.post('/employees', authenticate, requireRole('admin', 'hr'), async (req: 
 router.put('/employees/:id', authenticate, enforceDataScope, async (req: Request, res: Response, next) => {
   try {
     const employeeId = req.params.id;
-    const employee = await Employee.findById(employeeId);
+    const filter: any = { _id: employeeId };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const employee = await Employee.findOne(filter);
     if (!employee) {
       res.status(404).json({ success: false, message: 'Employee not found.' });
       return;
@@ -296,7 +310,8 @@ router.post('/employees/import-csv', authenticate, requireRole('admin', 'hr'), a
 
     const errors: Array<{ row: number; field: string; reason: string }> = [];
     const validRows: any[] = [];
-    const departments = await Department.find();
+    const deptFilter = req.user?.companyId ? { companyId: req.user.companyId } : {};
+    const departments = await Department.find(deptFilter);
     const deptMap = new Map<string, any>();
     departments.forEach((d) => {
       deptMap.set(d.code.toUpperCase(), d._id);
@@ -331,7 +346,10 @@ router.post('/employees/import-csv', authenticate, requireRole('admin', 'hr'), a
 
       // Check duplicates in existing DB
       if (row.employeeCode) {
-        const existCode = await Employee.findOne({ employeeCode: row.employeeCode.toUpperCase() });
+        const existCode = await Employee.findOne({
+          employeeCode: row.employeeCode.toUpperCase(),
+          ...(req.user?.companyId ? { companyId: req.user.companyId } : {}),
+        });
         if (existCode) {
           errors.push({ row: rowNum, field: 'employeeCode', reason: `Employee code ${row.employeeCode} already exists.` });
         }
@@ -375,6 +393,7 @@ router.post('/employees/import-csv', authenticate, requireRole('admin', 'hr'), a
 
       const passwordHash = await hashPassword('Welcome@123');
       const user = await User.create({
+        companyId: req.user?.companyId,
         name: `${valid.firstName} ${valid.lastName}`,
         email: valid.email.toLowerCase(),
         passwordHash,
@@ -384,6 +403,7 @@ router.post('/employees/import-csv', authenticate, requireRole('admin', 'hr'), a
       });
 
       const emp = await Employee.create({
+        companyId: req.user?.companyId,
         employeeCode: valid.employeeCode.toUpperCase(),
         firstName: valid.firstName,
         lastName: valid.lastName,
@@ -425,7 +445,8 @@ router.post('/employees/import-csv', authenticate, requireRole('admin', 'hr'), a
 // CSV Export
 router.get('/employees/export-csv', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
-    const employees = await Employee.find()
+    const filter = req.user?.companyId ? { companyId: req.user.companyId } : {};
+    const employees = await Employee.find(filter)
       .populate('departmentId', 'name code')
       .populate('designationId', 'title')
       .sort({ employeeCode: 1 });

@@ -4,6 +4,7 @@ export type LeaveType = 'annual' | 'sick' | 'casual' | 'unpaid';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export interface ILeaveRequest extends Document {
+  companyId?: mongoose.Types.ObjectId;
   employeeId: mongoose.Types.ObjectId;
   leaveType: LeaveType;
   startDate: string; // YYYY-MM-DD
@@ -20,6 +21,7 @@ export interface ILeaveRequest extends Document {
 
 const LeaveRequestSchema = new Schema<ILeaveRequest>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     employeeId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true, index: true },
     leaveType: {
       type: String,

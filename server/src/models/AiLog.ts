@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAiLog extends Document {
+  companyId?: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   userEmail: string;
   userRole: string;
@@ -20,6 +21,7 @@ export interface IAiLog extends Document {
 
 const AiLogSchema = new Schema<IAiLog>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     userEmail: { type: String, required: true },
     userRole: { type: String, required: true },

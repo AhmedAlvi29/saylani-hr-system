@@ -24,9 +24,10 @@ export const calculateAnnualTax = (annualGross: number): number => {
 // Calculate total working days in a given month (excluding weekends and public holidays)
 export const getWorkingDaysInMonth = async (
   year: number,
-  monthNumber: number // 1 to 12
+  monthNumber: number, // 1 to 12
+  companyId?: string
 ): Promise<{ workingDays: number; totalDays: number; holidays: string[] }> => {
-  const company = await Company.findOne();
+  const company = companyId ? await Company.findById(companyId) : await Company.findOne();
   const weekendDays = company?.weekendDays || [0, 6];
 
   const totalDays = new Date(year, monthNumber, 0).getDate();
@@ -34,9 +35,12 @@ export const getWorkingDaysInMonth = async (
   const startStr = `${year}-${monthStr}-01`;
   const endStr = `${year}-${monthStr}-${String(totalDays).padStart(2, '0')}`;
 
-  const holidays = await Holiday.find({
+  const holidayFilter: any = {
     date: { $gte: startStr, $lte: endStr },
-  }).lean();
+  };
+  if (companyId) holidayFilter.companyId = companyId;
+
+  const holidays = await Holiday.find(holidayFilter).lean();
   const holidaySet = new Set(holidays.map((h) => h.date));
 
   let workingDays = 0;
@@ -55,9 +59,12 @@ export const getWorkingDaysInMonth = async (
 
 export const generatePayrollDraft = async (
   monthStr: string, // "YYYY-MM"
-  generatedByUserId: string
+  generatedByUserId: string,
+  companyId?: string
 ) => {
-  const existingRun = await PayrollRun.findOne({ month: monthStr });
+  const runFilter: any = { month: monthStr };
+  if (companyId) runFilter.companyId = companyId;
+  const existingRun = await PayrollRun.findOne(runFilter);
   if (existingRun && existingRun.status === 'finalized') {
     const error: any = new Error(
       `Payroll for ${monthStr} is already finalized and locked. It cannot be regenerated.`
@@ -70,11 +77,13 @@ export const generatePayrollDraft = async (
   const year = parseInt(yearStr, 10);
   const monthNum = parseInt(mStr, 10);
 
-  const { workingDays: totalWorkingDays, totalDays } = await getWorkingDaysInMonth(year, monthNum);
+  const { workingDays: totalWorkingDays, totalDays } = await getWorkingDaysInMonth(year, monthNum, companyId);
 
-  const employees = await Employee.find({
+  const empFilter: any = {
     employmentStatus: { $in: ['active', 'probation', 'leaver'] },
-  });
+  };
+  if (companyId) empFilter.companyId = companyId;
+  const employees = await Employee.find(empFilter);
 
   const payslipItems: any[] = [];
   let sumGross = 0;
@@ -172,6 +181,7 @@ export const generatePayrollDraft = async (
     sumNet += netSalary;
 
     payslipItems.push({
+      companyId: companyId || emp.companyId,
       employeeId: emp._id,
       month: monthStr,
       basicSalary: emp.basicSalary,
@@ -205,6 +215,7 @@ export const generatePayrollDraft = async (
   let run = existingRun;
   if (!run) {
     run = new PayrollRun({
+      companyId: companyId || (employees[0]?.companyId),
       month: monthStr,
       year,
       workingDays: totalWorkingDays,
@@ -235,15 +246,18 @@ export const generatePayrollDraft = async (
   };
 };
 
-const getActiveWorkingDaysCount = async (startStr: string, endStr: string): Promise<number> => {
-  const company = await Company.findOne();
+const getActiveWorkingDaysCount = async (startStr: string, endStr: string, companyId?: string): Promise<number> => {
+  const company = companyId ? await Company.findById(companyId) : await Company.findOne();
   const weekendDays = company?.weekendDays || [0, 6];
   const start = new Date(startStr);
   const end = new Date(endStr);
 
-  const holidays = await Holiday.find({
+  const holidayFilter: any = {
     date: { $gte: startStr, $lte: endStr },
-  }).lean();
+  };
+  if (companyId) holidayFilter.companyId = companyId;
+
+  const holidays = await Holiday.find(holidayFilter).lean();
   const holidaySet = new Set(holidays.map((h) => h.date));
 
   let count = 0;
@@ -259,8 +273,10 @@ const getActiveWorkingDaysCount = async (startStr: string, endStr: string): Prom
   return Math.max(1, count);
 };
 
-export const finalizePayroll = async (monthStr: string, adminUserId: string) => {
-  const run = await PayrollRun.findOne({ month: monthStr });
+export const finalizePayroll = async (monthStr: string, adminUserId: string, companyId?: string) => {
+  const runFilter: any = { month: monthStr };
+  if (companyId) runFilter.companyId = companyId;
+  const run = await PayrollRun.findOne(runFilter);
   if (!run) {
     const error: any = new Error(`No payroll run found for ${monthStr}.`);
     error.statusCode = 404;
@@ -287,6 +303,7 @@ export const finalizePayroll = async (monthStr: string, adminUserId: string) => 
     const emp: any = slip.employeeId;
     if (emp && emp.userId) {
       await Notification.create({
+        companyId: run.companyId,
         userId: emp.userId,
         title: `Payslip Available for ${monthStr}`,
         message: `Your payslip for ${monthStr} is finalized with Net Salary of PKR ${slip.netSalary.toLocaleString()}. You can now download the official PDF.`,

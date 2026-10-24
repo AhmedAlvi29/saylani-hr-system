@@ -12,7 +12,10 @@ const router = Router();
 // Announcements: List
 router.get('/comms/announcements', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const announcements = await Announcement.find({ isActive: true })
+    const filter: any = { isActive: true };
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
+
+    const announcements = await Announcement.find(filter)
       .populate('createdBy', 'name email role')
       .sort({ createdAt: -1 });
 
@@ -36,6 +39,7 @@ router.post('/comms/announcements', authenticate, requireRole('admin', 'hr'), as
 
     const announcement = await Announcement.create({
       ...data,
+      companyId: req.user?.companyId,
       createdBy: req.user!.id,
       authorName: req.user!.name,
     });
@@ -98,6 +102,7 @@ router.get('/comms/audit-logs', authenticate, requireRole('admin'), async (req: 
     const { action, entity, actorEmail, limit = 50, page = 1 } = req.query;
 
     const filter: any = {};
+    if (req.user?.companyId) filter.companyId = req.user.companyId;
     if (action) filter.action = action;
     if (entity) filter.entity = entity;
     if (actorEmail) filter.actorEmail = { $regex: actorEmail, $options: 'i' };
