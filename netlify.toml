@@ -1,10 +1,16 @@
 [build]
-  command = "npm run build"
+  command = "npm install --prefix server && npm install --prefix client && npm run build --prefix client"
   publish = "client/dist"
+  functions = "netlify/functions"
 
-[build.environment]
-  SECRETS_SCAN_ENABLED = "false"
-  SECRETS_SCAN_OMIT_KEYS = "PORT,NODE_ENV,JWT_SECRET,ADMIN_PASSWORD"
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"

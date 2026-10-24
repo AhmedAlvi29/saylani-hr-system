@@ -114,8 +114,11 @@ const startServer = async () => {
 };
 
 // Start Server in standalone mode (local dev, Render, Docker). On Vercel serverless, app is handled directly.
-if (!process.env.VERCEL) {
+if (
+  !process.env.NETLIFY &&
+  !process.env.VERCEL &&
+  !process.env.AWS_LAMBDA_FUNCTION_NAME
+) {
   startServer();
 }
-
 export default app;
