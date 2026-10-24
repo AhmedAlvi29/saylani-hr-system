@@ -3,6 +3,9 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ICompany extends Document {
   name: string;
   code?: string;
+  email?: string;
+  address?: string;
+  phone?: string;
   timezone: string;
   officeStartTime: string; // e.g. "09:00"
   graceMinutes: number; // default 15
@@ -21,7 +24,10 @@ export interface ICompany extends Document {
 const CompanySchema = new Schema<ICompany>(
   {
     name: { type: String, required: true, trim: true },
-    code: { type: String, trim: true, default: 'SAYLANI' },
+    code: { type: String, trim: true, default: 'COMPANY' },
+    email: { type: String, trim: true, lowercase: true },
+    address: { type: String, trim: true },
+    phone: { type: String, trim: true },
     timezone: { type: String, default: 'Asia/Karachi' },
     officeStartTime: { type: String, default: '09:00' },
     graceMinutes: { type: Number, default: 15 },
@@ -32,10 +38,12 @@ const CompanySchema = new Schema<ICompany>(
       longitude: { type: Number, default: 67.0011 },
       radiusMeters: { type: Number, default: 150 },
     },
-    isSetupComplete: { type: Boolean, default: false },
+    isSetupComplete: { type: Boolean, default: true },
     initializedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
+
+CompanySchema.index({ name: 1 }, { unique: true });
 
 export const Company = mongoose.model<ICompany>('Company', CompanySchema);
