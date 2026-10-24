@@ -8,7 +8,9 @@ interface AuthContextType {
   isLoading: boolean;
   isSetupComplete: boolean;
   companyName: string;
-  login: (token: string, user: User) => void;
+  welcomeMessage: string | null;
+  setWelcomeMessage: (msg: string | null) => void;
+  login: (token: string, user: User, companyName?: string) => void;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
   checkSetup: () => Promise<boolean>;
@@ -22,6 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSetupComplete, setIsSetupComplete] = useState<boolean>(true);
   const [companyName, setCompanyName] = useState<string>('Saylani HCM Lite');
+  const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null);
 
   const checkSetup = async (): Promise<boolean> => {
     try {
@@ -47,6 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userData = await apiRequest<User>('/auth/me');
       setUser(userData);
+      if (userData.companyName) {
+        setCompanyName(userData.companyName);
+      }
     } catch (err) {
       console.warn('Session expired or invalid token:', err);
       logout();
@@ -64,10 +70,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     init();
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
+  const login = (newToken: string, newUser: User, newCompanyName?: string) => {
     localStorage.setItem('saylani_hcm_token', newToken);
     setToken(newToken);
     setUser(newUser);
+    if (newCompanyName) {
+      setCompanyName(newCompanyName);
+    } else if (newUser.companyName) {
+      setCompanyName(newUser.companyName);
+    }
   };
 
   const logout = () => {
@@ -90,6 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isSetupComplete,
         companyName,
+        welcomeMessage,
+        setWelcomeMessage,
         login,
         logout,
         updateUser,

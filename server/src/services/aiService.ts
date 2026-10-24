@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { Employee } from '../models/Employee';
 import { Attendance } from '../models/Attendance';
 import { LeaveRequest } from '../models/LeaveRequest';
@@ -11,13 +10,15 @@ import { getTodayDateString } from './attendanceService';
 
 // Initialize Gemini client if API key is present
 const apiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY || '';
-let aiClient: GoogleGenAI | null = null;
+let aiClient: any = null;
 if (apiKey) {
-  try {
-    aiClient = new GoogleGenAI({ apiKey });
-  } catch (err: any) {
-    console.warn('[AI Service] Failed to initialize GoogleGenAI client:', err.message);
-  }
+  import('@google/genai')
+    .then(({ GoogleGenAI }) => {
+      aiClient = new GoogleGenAI({ apiKey });
+    })
+    .catch((err: any) => {
+      console.warn('[AI Service] Failed to initialize GoogleGenAI client:', err.message);
+    });
 }
 
 // Backend Tools Implementation with Role Scope Enforcement

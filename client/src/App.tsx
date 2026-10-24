@@ -7,6 +7,7 @@ import { AiChatDrawer } from './components/common/AiChatDrawer';
 
 // Pages
 import { SetupWizardPage } from './pages/SetupWizardPage';
+import { RegisterCompanyPage } from './pages/RegisterCompanyPage';
 import { LoginPage } from './pages/LoginPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
@@ -100,6 +101,7 @@ export const App: React.FC = () => {
         <Routes>
           {/* Public & Auth Routes */}
           <Route path="/setup" element={<SetupWizardPage />} />
+          <Route path="/register-company" element={<RegisterCompanyPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route
             path="/change-password"

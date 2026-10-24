@@ -6,7 +6,29 @@ export interface User {
   email: string;
   role: UserRole;
   employeeId?: string;
+  companyId?: string;
+  companyName?: string;
   mustChangePassword?: boolean;
+}
+
+export interface Company {
+  _id: string;
+  name: string;
+  code?: string;
+  email?: string;
+  address?: string;
+  phone?: string;
+  timezone: string;
+  officeStartTime: string;
+  graceMinutes: number;
+  halfDayThresholdHours: number;
+  weekendDays: number[];
+  officeLocation?: {
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+  };
+  isSetupComplete: boolean;
 }
 
 export interface Department {

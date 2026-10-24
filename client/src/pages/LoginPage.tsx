@@ -62,12 +62,29 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl border border-slate-border shadow-soft-lg p-8 sm:p-10 transition-all">
         {/* Brand */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-5">
           <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-xl mx-auto shadow-soft mb-3">
             <Building2 className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-main tracking-tight">Sign in to HCM Lite</h2>
-          <p className="text-xs text-slate-muted mt-1">{companyName}</p>
+          <h2 className="text-2xl font-bold text-slate-main tracking-tight">HCM Lite</h2>
+          <p className="text-xs text-slate-muted mt-1">AI-Powered Human Capital Management</p>
+        </div>
+
+        {/* Clear Option Switcher: Sign In vs Register Company */}
+        <div className="mb-5 p-1 bg-slate-100 rounded-2xl flex items-center gap-1 border border-slate-200">
+          <button
+            type="button"
+            className="flex-1 py-2 text-xs font-semibold rounded-xl bg-white text-primary shadow-soft-sm text-center transition-all"
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/register-company')}
+            className="flex-1 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/60 text-center transition-all flex items-center justify-center gap-1.5"
+          >
+            <span>Register Your Company</span>
+          </button>
         </div>
 
         {/* Quick Demo Switcher Pills for Hackathon Judges */}
@@ -146,6 +163,19 @@ export const LoginPage: React.FC = () => {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+
+        {/* Footer CTA: Register New Company */}
+        <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-500 mb-2">Want to set up a new company?</p>
+          <button
+            type="button"
+            onClick={() => navigate('/register-company')}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover hover:underline"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            Register Your Company for HCM Lite
+          </button>
+        </div>
       </div>
     </div>
   );

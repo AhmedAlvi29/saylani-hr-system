@@ -21,7 +21,7 @@ export async function connectDB(): Promise<void> {
     console.log(`[Database] ✅ Connected successfully to ${isAtlas ? 'MongoDB Atlas' : 'MongoDB'}: ${uri.replace(/:([^:@]+)@/, ':****@')}`);
 
     // Automatically ensure all existing records are cleanly linked to the primary company
-    const { ensureDataIsolationMigration } = await import('../services/migrationService');
+    const { ensureDataIsolationMigration } = await import('../services/migrationService.js');
     await ensureDataIsolationMigration();
   } catch (err: any) {
     if (isAtlas) {

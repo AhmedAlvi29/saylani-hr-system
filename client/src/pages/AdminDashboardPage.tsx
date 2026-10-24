@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../services/api';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -12,6 +13,8 @@ import {
   ArrowUpRight,
   Clock,
   Layers,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -27,6 +30,7 @@ import {
 } from 'recharts';
 
 export const AdminDashboardPage: React.FC = () => {
+  const { welcomeMessage, setWelcomeMessage, companyName, user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSummarizing, setIsSummarizing] = useState<boolean>(false);
@@ -100,6 +104,29 @@ export const AdminDashboardPage: React.FC = () => {
           {isSummarizing ? 'Generating AI Insights...' : 'Summarize with AI'}
         </button>
       </div>
+
+      {/* Welcome Notification Banner on First Company Registration */}
+      {welcomeMessage && (
+        <div className="p-4 sm:p-5 bg-emerald-50/90 border border-emerald-200 rounded-2xl shadow-soft flex items-start justify-between gap-3 animate-fadeIn">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl mt-0.5">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-emerald-900">{welcomeMessage}</h3>
+              <p className="text-xs text-emerald-700 mt-1">
+                You are logged in as Administrator for <strong>{companyName}</strong> ({user?.email}). Default departments, leave quotas, and organization policies have been initialized with dedicated tenant isolation.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setWelcomeMessage(null)}
+            className="p-1.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-100/50 rounded-lg transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* AI Summary Highlight Box */}
       {summaryBullets && (
