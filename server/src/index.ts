@@ -54,6 +54,23 @@ app.use('/api', dashboardRoutes);
 app.use('/api', aiRoutes);
 app.use('/api', commsRoutes);
 
+// Serve frontend static build in production
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath));
+
+// For Single Page Application (SPA) routing, route non-API paths to index.html
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
+  }
+  const indexPath = path.join(clientDistPath, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      next();
+    }
+  });
+});
+
 // Centralized Safe Error Handling Middleware
 app.use(errorHandler);
 
