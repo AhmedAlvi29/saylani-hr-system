@@ -43,6 +43,29 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Ensure database is ready before processing API requests (handles cold starts in serverless/Vercel)
+let dbConnected = false;
+let dbPromise: Promise<void> | null = null;
+
+const ensureDB = async () => {
+  if (dbConnected) return;
+  if (!dbPromise) {
+    dbPromise = connectDB().then(() => {
+      dbConnected = true;
+    });
+  }
+  return dbPromise;
+};
+
+app.use('/api', async (req, res, next) => {
+  try {
+    await ensureDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Register Modular API Endpoints
 app.use('/api', authRoutes);
 app.use('/api', organizationRoutes);
@@ -90,6 +113,9 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Start Server in standalone mode (local dev, Render, Docker). On Vercel serverless, app is handled directly.
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 export default app;

@@ -8,6 +8,15 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../server/.env') });
 
 export async function connectDB(): Promise<void> {
+  // Reuse existing connection in serverless warm invocations
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+  if (mongoose.connection.readyState === 2) {
+    await new Promise((resolve) => mongoose.connection.once('connected', resolve));
+    return;
+  }
+
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/saylani_hcm_lite';
   const isAtlas = uri.includes('mongodb+srv://') || uri.includes('mongodb.net');
 
