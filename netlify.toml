@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "client/dist"
+
+[build.environment]
+  SECRETS_SCAN_ENABLED = "false"
+  SECRETS_SCAN_OMIT_KEYS = "PORT,NODE_ENV,JWT_SECRET,ADMIN_PASSWORD"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

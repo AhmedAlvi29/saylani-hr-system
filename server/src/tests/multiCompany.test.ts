@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { calculateAnnualTax, getWorkingDaysInMonth } from '../services/payrollService';
 
 describe('Multi-Company Data Isolation & Business Rules', () => {
-  const JWT_SECRET = process.env.JWT_SECRET || 'saylani_hcm_super_secret_jwt_key_2026_secure';
+  const JWT_SECRET = process.env.JWT_SECRET || 'hcm_dev_fallback_secret_key';
 
   it('generates JWT tokens containing companyId for tenant isolation', () => {
     const mockUserPayload = {

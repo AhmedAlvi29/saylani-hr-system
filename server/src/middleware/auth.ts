@@ -29,7 +29,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 
     const token = authHeader.split(' ')[1];
-    const secret = process.env.JWT_SECRET || 'saylani_hcm_super_secret_jwt_key_2026_secure';
+    const secret = process.env.JWT_SECRET || 'hcm_dev_fallback_secret_key';
 
     const decoded = jwt.verify(token, secret) as {
       id: string;

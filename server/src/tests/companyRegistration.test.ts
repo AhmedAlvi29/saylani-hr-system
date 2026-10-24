@@ -8,7 +8,7 @@ import { Designation } from '../models/Designation';
 import { Policy } from '../models/Policy';
 
 describe('Company Registration & First-Time Admin Setup Service', () => {
-  const JWT_SECRET = process.env.JWT_SECRET || 'saylani_hcm_super_secret_jwt_key_2026_secure';
+  const JWT_SECRET = process.env.JWT_SECRET || 'hcm_dev_fallback_secret_key';
 
   it('rejects registration if the administrator email already exists', async () => {
     // Mock User.findOne to simulate an existing account

@@ -6,7 +6,7 @@ import { Department } from '../models/Department';
 import { Designation } from '../models/Designation';
 import { Policy } from '../models/Policy';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'saylani_hcm_super_secret_jwt_key_2026_secure';
+const JWT_SECRET = process.env.JWT_SECRET || 'hcm_dev_fallback_secret_key';
 
 export const hashPassword = async (password: string): Promise<string> => {
   const salt = await bcrypt.genSalt(10);
