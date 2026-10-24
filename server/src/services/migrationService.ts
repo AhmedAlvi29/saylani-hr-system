@@ -97,6 +97,22 @@ export async function ensureDataIsolationMigration(): Promise<void> {
       { $set: { companyId } }
     );
 
+    // 8. Safely drop legacy global unique indexes that prevent multi-company tenancy
+    const safeDropIndex = async (model: any, indexName: string) => {
+      try {
+        await model.collection.dropIndex(indexName);
+        console.log(`[Database Migration] Dropped legacy global unique index '${indexName}' from ${model.collection.name}`);
+      } catch (e: any) {
+        // Silently ignore if index does not exist (error code 27: IndexNotFound)
+      }
+    };
+
+    await safeDropIndex(Department, 'name_1');
+    await safeDropIndex(Department, 'code_1');
+    await safeDropIndex(Holiday, 'date_1');
+    await safeDropIndex(PayrollRun, 'month_1');
+    await safeDropIndex(Employee, 'employeeCode_1');
+
     console.log(`[Database Migration] ✅ Verified data isolation links for company: "${primaryCompany.name}"`);
   } catch (err: any) {
     console.warn('[Database Migration] Migration warning:', err.message);

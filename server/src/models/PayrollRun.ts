@@ -41,6 +41,6 @@ const PayrollRunSchema = new Schema<IPayrollRun>(
   { timestamps: true }
 );
 
-PayrollRunSchema.index({ companyId: 1, month: 1 });
+PayrollRunSchema.index({ companyId: 1, month: 1 }, { unique: true });
 
 export const PayrollRun = mongoose.model<IPayrollRun>('PayrollRun', PayrollRunSchema);

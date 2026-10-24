@@ -68,8 +68,8 @@ const EmployeeSchema = new Schema<IEmployee>(
   { timestamps: true }
 );
 
-EmployeeSchema.index({ companyId: 1, employeeCode: 1 });
-EmployeeSchema.index({ companyId: 1, email: 1 });
+EmployeeSchema.index({ companyId: 1, employeeCode: 1 }, { unique: true });
+EmployeeSchema.index({ companyId: 1, email: 1 }, { unique: true });
 
 // Helpful virtual for full name
 EmployeeSchema.virtual('fullName').get(function () {

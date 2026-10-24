@@ -21,7 +21,7 @@ const DepartmentSchema = new Schema<IDepartment>(
   { timestamps: true }
 );
 
-DepartmentSchema.index({ companyId: 1, name: 1 });
-DepartmentSchema.index({ companyId: 1, code: 1 });
+DepartmentSchema.index({ companyId: 1, name: 1 }, { unique: true });
+DepartmentSchema.index({ companyId: 1, code: 1 }, { unique: true });
 
 export const Department = mongoose.model<IDepartment>('Department', DepartmentSchema);

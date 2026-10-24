@@ -23,6 +23,6 @@ const HolidaySchema = new Schema<IHoliday>(
   { timestamps: true }
 );
 
-HolidaySchema.index({ companyId: 1, date: 1 });
+HolidaySchema.index({ companyId: 1, date: 1 }, { unique: true });
 
 export const Holiday = mongoose.model<IHoliday>('Holiday', HolidaySchema);
