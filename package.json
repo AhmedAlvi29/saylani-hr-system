@@ -1,0 +1,21 @@
+{
+  "name": "saylani-hcm-lite",
+  "version": "1.0.0",
+  "description": "HCM Lite - AI-Powered Human Capital Management System for Saylani Hackathon",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"server,client\" -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "start": "npm --prefix server run start",
+    "test": "npm --prefix server run test",
+    "seed": "npm --prefix server run seed",
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
