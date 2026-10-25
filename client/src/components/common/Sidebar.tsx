@@ -121,6 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
           <button
             onClick={onClose}
+            aria-label="Close navigation sidebar"
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 lg:hidden"
           >
             <X className="w-5 h-5" />

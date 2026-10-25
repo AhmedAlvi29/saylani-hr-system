@@ -72,12 +72,22 @@ export const AdminDashboardPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="h-8 w-48 bg-slate-200 animate-pulse rounded-lg" />
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="h-7 w-48 bg-slate-200 animate-pulse rounded-lg" />
+            <div className="h-3 w-72 bg-slate-100 animate-pulse rounded" />
+          </div>
+          <div className="h-9 w-36 bg-slate-200 animate-pulse rounded-xl" />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-slate-100 animate-pulse rounded-2xl" />
+            <div key={i} className="h-28 bg-white border border-slate-border rounded-2xl p-5 shadow-soft animate-pulse" />
           ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-72 bg-white border border-slate-border rounded-2xl p-5 shadow-soft animate-pulse" />
+          <div className="h-72 bg-white border border-slate-border rounded-2xl p-5 shadow-soft animate-pulse" />
         </div>
       </div>
     );
@@ -121,6 +131,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <button
             onClick={() => setWelcomeMessage(null)}
+            aria-label="Dismiss notification"
             className="p-1.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-100/50 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
@@ -159,7 +170,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div className="mt-3">
             <span className="text-2xl font-extrabold text-slate-main">{kpis.headcount || 0}</span>
-            <span className="text-xs text-slate-400 ml-2">Active Employees</span>
+            <span className="text-xs text-slate-500 ml-2">Active Employees</span>
           </div>
         </Card>
 
@@ -172,7 +183,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div className="mt-3">
             <span className="text-2xl font-extrabold text-slate-main">{kpis.attritionRateYtd || 0}%</span>
-            <span className="text-xs text-slate-400 ml-2">{kpis.exitsThisYear || 0} exits</span>
+            <span className="text-xs text-slate-500 ml-2">{kpis.exitsThisYear || 0} exits</span>
           </div>
         </Card>
 
@@ -187,7 +198,7 @@ export const AdminDashboardPage: React.FC = () => {
             <span className="text-2xl font-extrabold text-slate-main">
               PKR {(kpis.payrollCost || 0).toLocaleString()}
             </span>
-            <span className="text-xs text-slate-400 ml-1.5">Gross</span>
+            <span className="text-xs text-slate-500 ml-1.5">Gross</span>
           </div>
         </Card>
 
@@ -202,7 +213,7 @@ export const AdminDashboardPage: React.FC = () => {
             <span className="text-2xl font-extrabold text-slate-main">
               PKR {(kpis.avgSalary || 0).toLocaleString()}
             </span>
-            <span className="text-xs text-slate-400 ml-1.5">/ Month</span>
+            <span className="text-xs text-slate-500 ml-1.5">/ Month</span>
           </div>
         </Card>
       </div>
@@ -224,7 +235,7 @@ export const AdminDashboardPage: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-slate-400">
+              <div className="h-full flex items-center justify-center text-xs text-slate-500">
                 No departmental data registered yet
               </div>
             )}
@@ -237,8 +248,8 @@ export const AdminDashboardPage: React.FC = () => {
             {charts.payrollByDept?.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={charts.payrollByDept}>
-                  <XAxis dataKey="department" stroke="#94A3B8" fontSize={11} />
-                  <YAxis stroke="#94A3B8" fontSize={11} />
+                  <XAxis dataKey="department" stroke="#64748B" fontSize={11} />
+                  <YAxis stroke="#64748B" fontSize={11} />
                   <Tooltip
                     formatter={(val: any) => `PKR ${Number(val).toLocaleString()}`}
                     contentStyle={{ backgroundColor: '#FFF', borderRadius: '12px', border: '1px solid #E2E8F0' }}
@@ -247,7 +258,7 @@ export const AdminDashboardPage: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-slate-400">
+              <div className="h-full flex items-center justify-center text-xs text-slate-500">
                 No payroll calculated yet
               </div>
             )}
@@ -259,7 +270,7 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="h-60 w-full mt-2 flex items-center justify-center">
             {charts.genderDistribution?.some((g: any) => g.value > 0) ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart accessibilityLayer role="img" aria-label="Gender Diversity Distribution Chart">
                   <Pie
                     data={charts.genderDistribution}
                     dataKey="value"
@@ -270,7 +281,11 @@ export const AdminDashboardPage: React.FC = () => {
                     label
                   >
                     {charts.genderDistribution.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                        aria-label={`${entry.name}: ${entry.value}`}
+                      />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -278,7 +293,7 @@ export const AdminDashboardPage: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-xs text-slate-400">No employee records</div>
+              <div className="text-xs text-slate-500">No employee records</div>
             )}
           </div>
         </Card>
@@ -288,8 +303,8 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="h-60 w-full mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={charts.tenureDistribution || []}>
-                <XAxis dataKey="name" stroke="#94A3B8" fontSize={11} />
-                <YAxis stroke="#94A3B8" fontSize={11} />
+                <XAxis dataKey="name" stroke="#64748B" fontSize={11} />
+                <YAxis stroke="#64748B" fontSize={11} />
                 <Tooltip />
                 <Bar dataKey="count" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -303,7 +318,7 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="overflow-x-auto mt-2">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider">
+              <tr className="border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
                 <th className="pb-2.5">Time</th>
                 <th className="pb-2.5">Actor</th>
                 <th className="pb-2.5">Action</th>
@@ -311,11 +326,11 @@ export const AdminDashboardPage: React.FC = () => {
                 <th className="pb-2.5">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {data?.auditFeed?.length > 0 ? (
                 data.auditFeed.map((log: any) => (
                   <tr key={log._id} className="hover:bg-slate-50/50">
-                    <td className="py-2.5 text-slate-400 whitespace-nowrap">
+                    <td className="py-2.5 text-slate-500 whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="py-2.5 font-medium text-slate-700">{log.actorEmail}</td>
@@ -325,12 +340,12 @@ export const AdminDashboardPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-2.5 text-slate-600">{log.entity}</td>
-                    <td className="py-2.5 text-slate-500 max-w-xs truncate">{log.details || '-'}</td>
+                    <td className="py-2.5 text-slate-600 max-w-xs truncate">{log.details || '-'}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-slate-400">
+                  <td colSpan={5} className="py-6 text-center text-slate-500">
                     No audit records logged yet.
                   </td>
                 </tr>

@@ -209,12 +209,14 @@ export const AiChatDrawer: React.FC<AiChatDrawerProps> = ({ isOpen, onClose, onL
                   ])
                 }
                 title="Reset conversation"
+                aria-label="Reset conversation"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
               <button
                 onClick={onClose}
+                aria-label="Close AI Assistant drawer"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white"
               >
                 <X className="w-5 h-5" />
@@ -339,11 +341,13 @@ export const AiChatDrawer: React.FC<AiChatDrawerProps> = ({ isOpen, onClose, onL
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Ask headcount, attendance, leaves, or policy..."
+                aria-label="Ask AI assistant a question"
                 className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-slate-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 disabled={isLoading}
               />
               <button
                 type="submit"
+                aria-label="Send message"
                 disabled={!prompt.trim() || isLoading}
                 className="p-2.5 rounded-xl bg-primary hover:bg-primary-hover disabled:opacity-50 text-white shadow-soft transition-all"
               >

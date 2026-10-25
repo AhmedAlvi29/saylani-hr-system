@@ -47,17 +47,20 @@ export const Modal: React.FC<ModalProps> = ({
 
       <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
         <div
+          role="dialog"
+          aria-modal="true"
           className={`relative transform overflow-hidden rounded-2xl bg-white text-left shadow-soft-lg transition-all w-full my-8 ${maxWidthClass} border border-slate-border`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
             <div>
-              <h3 className="text-lg font-semibold text-slate-main">{title}</h3>
+              <h2 className="text-lg font-semibold text-slate-main">{title}</h2>
               {subtitle && <p className="text-xs text-slate-muted mt-0.5">{subtitle}</p>}
             </div>
             <button
               onClick={onClose}
+              aria-label="Close modal dialog"
               className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <X className="w-5 h-5" />

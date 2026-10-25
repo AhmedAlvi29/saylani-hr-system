@@ -43,7 +43,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchCurrentUser = async () => {
     if (!token) {
       setUser(null);
-      setIsLoading(false);
       return;
     }
 
@@ -56,18 +55,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.warn('Session expired or invalid token:', err);
       logout();
-    } finally {
-      setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    let isMounted = true;
     const init = async () => {
       setIsLoading(true);
-      await checkSetup();
-      await fetchCurrentUser();
+      try {
+        await Promise.all([checkSetup(), fetchCurrentUser()]);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
     init();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = (newToken: string, newUser: User, newCompanyName?: string) => {

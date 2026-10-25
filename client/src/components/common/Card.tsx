@@ -22,7 +22,7 @@ export const Card: React.FC<CardProps> = ({
       {(title || action) && (
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
           <div>
-            {title && <h3 className="font-semibold text-slate-main text-base sm:text-lg">{title}</h3>}
+            {title && <h2 className="font-semibold text-slate-main text-base sm:text-lg">{title}</h2>}
             {subtitle && <p className="text-xs text-slate-muted mt-0.5">{subtitle}</p>}
           </div>
           {action && <div>{action}</div>}

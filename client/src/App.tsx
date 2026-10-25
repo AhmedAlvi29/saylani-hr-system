@@ -1,24 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
 import { AiChatDrawer } from './components/common/AiChatDrawer';
 
-// Pages
-import { SetupWizardPage } from './pages/SetupWizardPage';
-import { RegisterCompanyPage } from './pages/RegisterCompanyPage';
-import { LoginPage } from './pages/LoginPage';
-import { ChangePasswordPage } from './pages/ChangePasswordPage';
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
-import { HrDashboardPage } from './pages/HrDashboardPage';
-import { EmployeeDashboardPage } from './pages/EmployeeDashboardPage';
-import { EmployeesPage } from './pages/EmployeesPage';
-import { AttendancePage } from './pages/AttendancePage';
-import { LeavesPage } from './pages/LeavesPage';
-import { PayrollPage } from './pages/PayrollPage';
-import { OrganizationSettingsPage } from './pages/OrganizationSettingsPage';
-import { CommsAuditPage } from './pages/CommsAuditPage';
+// Lazy-loaded Pages for Route Code-Splitting and Optimal TTI
+const SetupWizardPage = lazy(() => import('./pages/SetupWizardPage').then((m) => ({ default: m.SetupWizardPage })));
+const RegisterCompanyPage = lazy(() => import('./pages/RegisterCompanyPage').then((m) => ({ default: m.RegisterCompanyPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
+const HrDashboardPage = lazy(() => import('./pages/HrDashboardPage').then((m) => ({ default: m.HrDashboardPage })));
+const EmployeeDashboardPage = lazy(() => import('./pages/EmployeeDashboardPage').then((m) => ({ default: m.EmployeeDashboardPage })));
+const EmployeesPage = lazy(() => import('./pages/EmployeesPage').then((m) => ({ default: m.EmployeesPage })));
+const AttendancePage = lazy(() => import('./pages/AttendancePage').then((m) => ({ default: m.AttendancePage })));
+const LeavesPage = lazy(() => import('./pages/LeavesPage').then((m) => ({ default: m.LeavesPage })));
+const PayrollPage = lazy(() => import('./pages/PayrollPage').then((m) => ({ default: m.PayrollPage })));
+const OrganizationSettingsPage = lazy(() => import('./pages/OrganizationSettingsPage').then((m) => ({ default: m.OrganizationSettingsPage })));
+const CommsAuditPage = lazy(() => import('./pages/CommsAuditPage').then((m) => ({ default: m.CommsAuditPage })));
+
+const PageLoader: React.FC = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 // Protected Route Guard
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({
@@ -98,7 +104,8 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
           {/* Public & Auth Routes */}
           <Route path="/setup" element={<SetupWizardPage />} />
           <Route path="/register-company" element={<RegisterCompanyPage />} />
@@ -226,7 +233,8 @@ export const App: React.FC = () => {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
+      </Suspense>
+    </BrowserRouter>
     </AuthProvider>
   );
 };

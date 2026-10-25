@@ -62,6 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, onOpenAiChat })
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
+          aria-label="Toggle navigation menu"
           className="p-2 rounded-xl text-slate-muted hover:text-slate-main hover:bg-slate-100 lg:hidden transition-colors"
         >
           <Menu className="w-5 h-5" />
@@ -95,6 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, onOpenAiChat })
               setShowNotifications(!showNotifications);
               setShowProfileMenu(false);
             }}
+            aria-label="View notifications"
             className="p-2 rounded-xl text-slate-muted hover:text-slate-main hover:bg-slate-100 transition-colors relative"
           >
             <Bell className="w-5 h-5" />
@@ -133,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, onOpenAiChat })
                     >
                       <div className="font-semibold text-slate-main mb-0.5">{n.title}</div>
                       <div className="text-slate-600 line-clamp-2 leading-relaxed">{n.message}</div>
-                      <div className="text-[10px] text-slate-400 mt-1">
+                      <div className="text-[10px] text-slate-500 mt-1">
                         {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
@@ -151,6 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, onOpenAiChat })
               setShowProfileMenu(!showProfileMenu);
               setShowNotifications(false);
             }}
+            aria-label="User profile menu"
             className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
           >
             <div className="w-8 h-8 rounded-xl bg-primary-light text-primary font-bold flex items-center justify-center text-xs border border-indigo-200">
