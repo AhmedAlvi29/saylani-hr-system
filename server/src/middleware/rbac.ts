@@ -33,16 +33,8 @@ export const enforceDataScope = (req: Request, res: Response, next: NextFunction
 
   // Employee role can ONLY access their own records
   if (req.user.role === 'employee') {
-    const rawTarget =
-      typeof req.params.employeeId === 'string'
-        ? req.params.employeeId
-        : typeof req.body?.employeeId === 'string'
-        ? req.body.employeeId
-        : typeof req.query?.employeeId === 'string'
-        ? req.query.employeeId
-        : undefined;
-
-    if (!req.user.employeeId) {
+    const userEmployeeId = req.user.employeeId ? String(req.user.employeeId) : undefined;
+    if (!userEmployeeId) {
       res.status(403).json({
         success: false,
         message: 'No employee record associated with this account.',
@@ -50,21 +42,13 @@ export const enforceDataScope = (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    // If an employeeId is explicitly targeted, ensure it strictly matches the logged in user's employeeId
-    if (rawTarget && String(rawTarget) !== String(req.user.employeeId)) {
+    // If an entity :id is targeted in path parameters (e.g., /employees/:id), verify it strictly matches own employee ID
+    if (req.params?.id && String(req.params.id) !== userEmployeeId) {
       res.status(403).json({
         success: false,
         message: 'Access denied: You are only authorized to view and manage your own employee records.',
       });
       return;
-    }
-
-    // Automatically enforce own employeeId on queries & mutations
-    if (req.query) {
-      req.query.employeeId = String(req.user.employeeId);
-    }
-    if (req.body && req.body.employeeId) {
-      req.body.employeeId = String(req.user.employeeId);
     }
   }
 
