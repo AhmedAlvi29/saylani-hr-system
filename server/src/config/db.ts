@@ -18,7 +18,13 @@ export async function connectDB(): Promise<void> {
   }
 
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/saylani_hcm_lite';
-  const isAtlas = uri.includes('mongodb+srv://') || uri.includes('mongodb.net');
+  let isAtlas = false;
+  try {
+    const hostname = new URL(uri).hostname;
+    isAtlas = uri.startsWith('mongodb+srv://') || hostname === 'mongodb.net' || hostname.endsWith('.mongodb.net');
+  } catch {
+    isAtlas = uri.startsWith('mongodb+srv://');
+  }
 
   let isConnected = false;
 

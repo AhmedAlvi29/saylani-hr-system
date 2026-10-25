@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db';
 import { errorHandler } from './middleware/errorHandler';
@@ -23,6 +24,12 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 1000,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
 
 // Security & Body Parsers
 app.use(
@@ -33,6 +40,7 @@ app.use(
 );
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/api', apiLimiter);
 
 // Health Check
 app.get('/api/health', (req, res) => {

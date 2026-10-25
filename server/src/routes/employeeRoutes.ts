@@ -27,16 +27,16 @@ router.get('/employees', authenticate, enforceDataScope, async (req: Request, re
 
     // If role is employee, force own employeeId
     if (req.user?.role === 'employee') {
-      query._id = req.user.employeeId;
+      query._id = { $eq: req.user.employeeId };
     } else {
-      if (department) query.departmentId = department;
-      if (status) query.employmentStatus = status;
+      if (department) query.departmentId = { $eq: department };
+      if (status) query.employmentStatus = { $eq: status };
       if (search) {
         query.$or = [
-          { firstName: { $regex: search, $options: 'i' } },
-          { lastName: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { employeeCode: { $regex: search, $options: 'i' } },
+          { firstName: { $eq: search } },
+          { lastName: { $eq: search } },
+          { email: { $eq: search } },
+          { employeeCode: { $eq: search } },
         ];
       }
     }

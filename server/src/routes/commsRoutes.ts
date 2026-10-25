@@ -100,12 +100,19 @@ router.patch('/comms/notifications/read-all', authenticate, async (req: Request,
 router.get('/comms/audit-logs', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
     const { action, entity, actorEmail, limit = 50, page = 1 } = req.query;
+    const filters = z
+      .object({
+        action: z.string().optional(),
+        entity: z.string().optional(),
+        actorEmail: z.string().optional(),
+      })
+      .parse({ action, entity, actorEmail });
 
     const filter: any = {};
     if (req.user?.companyId) filter.companyId = req.user.companyId;
-    if (action) filter.action = action;
-    if (entity) filter.entity = entity;
-    if (actorEmail) filter.actorEmail = { $regex: actorEmail, $options: 'i' };
+    if (filters.action) filter.action = { $eq: filters.action };
+    if (filters.entity) filter.entity = { $eq: filters.entity };
+    if (filters.actorEmail) filter.actorEmail = { $eq: filters.actorEmail };
 
     const pageNum = Math.max(1, parseInt(page as string, 10));
     const pageSize = Math.min(200, Math.max(1, parseInt(limit as string, 10)));

@@ -26,8 +26,8 @@ export const checkInEmployee = async (params: {
 
   // 1. Check for duplicate check-in today
   const existingRecord = await Attendance.findOne({
-    employeeId: params.employeeId,
-    date: todayStr,
+    employeeId: { $eq: params.employeeId },
+    date: { $eq: todayStr },
   });
 
   if (existingRecord && existingRecord.checkInTime) {
@@ -37,7 +37,7 @@ export const checkInEmployee = async (params: {
   }
 
   // 2. Fetch employee & company settings for timing & geofence
-  const employee = await Employee.findById(params.employeeId);
+  const employee = await Employee.findOne({ _id: { $eq: params.employeeId } });
   const companyId = params.companyId || employee?.companyId?.toString();
   const company = companyId ? await Company.findById(companyId) : await Company.findOne();
   const officeStartTime = company?.officeStartTime || '09:00';
@@ -124,8 +124,8 @@ export const checkOutEmployee = async (params: {
   const now = new Date();
 
   const record = await Attendance.findOne({
-    employeeId: params.employeeId,
-    date: todayStr,
+    employeeId: { $eq: params.employeeId },
+    date: { $eq: todayStr },
   });
 
   if (!record || !record.checkInTime) {
@@ -172,7 +172,7 @@ export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: s
     employeeFilter.companyId = companyId;
   }
   if (departmentId) {
-    employeeFilter.departmentId = departmentId;
+    employeeFilter.departmentId = { $eq: departmentId };
   }
 
   const employees = await Employee.find(employeeFilter)
@@ -181,7 +181,7 @@ export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: s
     .lean();
 
   // Find all attendance records for targetDate
-  const attFilter: any = { date: targetDate };
+  const attFilter: any = { date: { $eq: targetDate } };
   if (companyId) attFilter.companyId = companyId;
   const attendanceRecords = await Attendance.find(attFilter).lean();
   const attendanceMap = new Map<string, any>();

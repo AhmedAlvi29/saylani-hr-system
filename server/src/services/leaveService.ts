@@ -10,9 +10,9 @@ export const getOrCreateLeaveBalance = async (
   year: number = new Date().getFullYear(),
   companyId?: string
 ): Promise<ILeaveBalance> => {
-  let balance = await LeaveBalance.findOne({ employeeId, year });
+  let balance = await LeaveBalance.findOne({ employeeId: { $eq: employeeId }, year: { $eq: year } });
   if (!balance) {
-    const emp = await Employee.findById(employeeId);
+    const emp = await Employee.findOne({ _id: { $eq: employeeId } });
     balance = await LeaveBalance.create({
       companyId: companyId || emp?.companyId,
       employeeId,
@@ -87,7 +87,7 @@ export const applyForLeave = async (params: {
   reason: string;
   companyId?: string;
 }) => {
-  const employee = await Employee.findById(params.employeeId);
+  const employee = await Employee.findOne({ _id: { $eq: params.employeeId } });
   const compId = params.companyId || employee?.companyId?.toString();
 
   // 1. Calculate working days
@@ -102,7 +102,7 @@ export const applyForLeave = async (params: {
 
   // 2. Prevent overlapping leaves
   const existingOverlap = await LeaveRequest.findOne({
-    employeeId: params.employeeId,
+    employeeId: { $eq: params.employeeId },
     status: { $in: ['pending', 'approved'] },
     $or: [
       { startDate: { $lte: params.endDate }, endDate: { $gte: params.startDate } },

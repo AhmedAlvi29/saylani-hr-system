@@ -126,9 +126,9 @@ router.get('/attendance/history', authenticate, enforceDataScope, async (req: Re
     }
 
     if (req.user?.role === 'employee') {
-      filter.employeeId = req.user.employeeId;
+      filter.employeeId = { $eq: req.user.employeeId };
     } else if (employeeId) {
-      filter.employeeId = employeeId;
+      filter.employeeId = { $eq: employeeId };
     }
 
     if (month) {
