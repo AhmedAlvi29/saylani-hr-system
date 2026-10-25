@@ -12,7 +12,7 @@ An enterprise-grade, soft-light **Human Capital Management (HCM) Lite** SaaS app
 
 ---
 
-## 🛠️ 1. Technology Stack
+## 1. Technology Stack
 
 ### Frontend
 - **Framework & Bundler:** React 18, Vite, TypeScript
@@ -41,7 +41,7 @@ An enterprise-grade, soft-light **Human Capital Management (HCM) Lite** SaaS app
 
 ---
 
-## 🚀 2. How to Run the Project
+## 2. How to Run the Project
 
 ### Prerequisites
 - **Node.js:** v18.0.0 or higher (v20+ / v22+ / v24+ recommended)
@@ -101,7 +101,7 @@ npm start
 
 ---
 
-## 👑 3. How to Create the First Admin
+## 3. How to Create the First Admin
 
 You have **two distinct ways** to create the initial Admin account:
 
@@ -134,7 +134,7 @@ This populates MongoDB Atlas with the following verified credentials:
 
 ---
 
-## 🔑 4. How to Set the AI Key (`GEMINI_API_KEY`)
+## 4. How to Set the AI Key (`GEMINI_API_KEY`)
 
 The HCM Lite AI Assistant is powered by Google Gemini and equipped with real-time database tools.
 
@@ -163,9 +163,9 @@ GEMINI_API_KEY=AIzaSyYourGeneratedGeminiKeyHere
 
 ---
 
-## 📊 5. What Is Done and What Is Not Done
+## 5. What Is Done and What Is Not Done
 
-### ✅ What Is Done (Completed & Verified)
+### What Is Done (Completed & Verified)
 
 | Module | Feature | Status | Notes |
 | :--- | :--- | :---: | :--- |
@@ -211,7 +211,7 @@ GEMINI_API_KEY=AIzaSyYourGeneratedGeminiKeyHere
 
 ---
 
-### ⏳ What Is Not Done (Deliberate Architectural Boundaries)
+### What Is Not Done (Deliberate Architectural Boundaries)
 
 The following items are intentionally omitted or out-of-scope for this hackathon release:
 
@@ -230,7 +230,7 @@ The following items are intentionally omitted or out-of-scope for this hackathon
 
 ---
 
-## 🔒 6. Security & Data Integrity
+## 6. Security & Data Integrity
 
 - **Database-Level Data Isolation:** Every database model stores `companyId`. Queries and updates are strictly filtered by the authenticated user's `companyId`.
 - **Zero Plaintext Passwords:** Passwords are encrypted using `bcryptjs` with 10 salt rounds. Passwords and hashes are strictly stripped from all API outputs.
@@ -239,5 +239,5 @@ The following items are intentionally omitted or out-of-scope for this hackathon
 
 ---
 
-## 📄 License
+## License
 This project is licensed under the MIT License — built for the **Saylani Hackathon 2026**.
