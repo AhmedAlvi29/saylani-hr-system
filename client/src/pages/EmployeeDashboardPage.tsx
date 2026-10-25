@@ -20,8 +20,17 @@ import { useNavigate } from 'react-router-dom';
 
 export const EmployeeDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Instant rehydration from sessionStorage so refresh is instant (0ms loading time)
+  const [data, setData] = useState<any>(() => {
+    try {
+      const cached = sessionStorage.getItem('saylani_hcm_employee_dashboard');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => !sessionStorage.getItem('saylani_hcm_employee_dashboard'));
   const [isCheckingIn, setIsCheckingIn] = useState<boolean>(false);
   const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
 
@@ -31,10 +40,12 @@ export const EmployeeDashboardPage: React.FC = () => {
   const [gpsLocation, setGpsLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const fetchEmployeeData = async () => {
+  const fetchEmployeeData = async (showLoading = !data) => {
+    if (showLoading) setIsLoading(true);
     try {
       const res = await apiRequest('/dashboard/employee');
       setData(res);
+      sessionStorage.setItem('saylani_hcm_employee_dashboard', JSON.stringify(res));
     } catch (err) {
       console.error(err);
     } finally {
@@ -43,7 +54,7 @@ export const EmployeeDashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchEmployeeData();
+    fetchEmployeeData(!data);
   }, []);
 
   // Standard Web Check-in

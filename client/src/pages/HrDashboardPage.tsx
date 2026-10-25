@@ -30,16 +30,26 @@ import { useNavigate } from 'react-router-dom';
 
 export const HrDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Instant rehydration from sessionStorage so refresh is instant (0ms loading time)
+  const [data, setData] = useState<any>(() => {
+    try {
+      const cached = sessionStorage.getItem('saylani_hcm_hr_dashboard');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => !sessionStorage.getItem('saylani_hcm_hr_dashboard'));
   const [isSummarizing, setIsSummarizing] = useState<boolean>(false);
   const [summaryBullets, setSummaryBullets] = useState<string[] | null>(null);
 
-  const fetchMetrics = async () => {
-    setIsLoading(true);
+  const fetchMetrics = async (showLoading = !data) => {
+    if (showLoading) setIsLoading(true);
     try {
       const res = await apiRequest('/dashboard/hr');
       setData(res);
+      sessionStorage.setItem('saylani_hcm_hr_dashboard', JSON.stringify(res));
     } catch (err) {
       console.error(err);
     } finally {
@@ -48,7 +58,7 @@ export const HrDashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchMetrics();
+    fetchMetrics(!data);
   }, []);
 
   const handleAiSummarize = async () => {

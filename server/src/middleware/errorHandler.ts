@@ -11,8 +11,9 @@ export const errorHandler = (
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {
-    const formattedErrors = err.errors.map((e) => ({
-      field: e.path.join('.'),
+    const issues = err.issues || (err as any).errors || [];
+    const formattedErrors = issues.map((e: any) => ({
+      field: Array.isArray(e.path) ? e.path.join('.') : String(e.path || ''),
       message: e.message,
     }));
     res.status(400).json({

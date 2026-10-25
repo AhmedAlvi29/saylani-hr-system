@@ -145,18 +145,19 @@ router.post('/auth/login', async (req: Request, res: Response, next) => {
       return;
     }
 
-    user.lastLogin = new Date();
-    await user.save();
+    // Fire-and-forget lastLogin update so we don't block the login response
+    User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } }).exec().catch(() => {});
 
     let companyName = 'Saylani HCM Lite';
     if (user.companyId) {
-      const comp = await Company.findById(user.companyId);
+      const comp = await Company.findById(user.companyId).select('name').lean();
       if (comp) companyName = comp.name;
     }
 
     const token = generateToken(user);
 
-    await logAudit(req, {
+    // Non-blocking fire-and-forget audit log to keep login response instantaneous
+    void logAudit(req, {
       action: 'USER_LOGIN',
       entity: 'User',
       entityId: user._id.toString(),
@@ -231,7 +232,7 @@ router.post('/auth/change-password', authenticate, async (req: Request, res: Res
 // Current User Info
 router.get('/auth/me', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const user = await User.findById(req.user!.id).populate('employeeId');
+    const user = await User.findById(req.user!.id).populate('employeeId').lean();
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found.' });
       return;
@@ -240,14 +241,17 @@ router.get('/auth/me', authenticate, async (req: Request, res: Response, next) =
     let companyName = 'Saylani HCM Lite';
     let company: any = null;
     if (user.companyId) {
-      company = await Company.findById(user.companyId);
+      company = await Company.findById(user.companyId).lean();
       if (company) companyName = company.name;
     }
+
+    const { passwordHash, ...safeUser } = user as any;
 
     res.json({
       success: true,
       data: {
-        ...user.toJSON(),
+        ...safeUser,
+        id: safeUser._id,
         companyId: user.companyId,
         companyName,
         company,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../services/api';
@@ -12,6 +12,16 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState<string>('Admin@123456');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Pre-warm dashboard route bundles in browser cache so login navigation is instantaneous
+    const prewarmTimer = setTimeout(() => {
+      import('./AdminDashboardPage');
+      import('./HrDashboardPage');
+      import('./EmployeeDashboardPage');
+    }, 100);
+    return () => clearTimeout(prewarmTimer);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

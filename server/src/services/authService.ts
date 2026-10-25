@@ -32,15 +32,31 @@ export const generateToken = (user: IUser): string => {
   );
 };
 
+let cachedSetupStatus: { isSetupComplete: boolean; companyName?: string } | null = null;
+
+export const clearSetupStatusCache = () => {
+  cachedSetupStatus = null;
+};
+
 export const checkSetupStatus = async (): Promise<{ isSetupComplete: boolean; companyName?: string }> => {
-  const company = await Company.findOne();
+  if (cachedSetupStatus && cachedSetupStatus.isSetupComplete) {
+    return cachedSetupStatus;
+  }
+
+  const company = await Company.findOne().select('name isSetupComplete').lean();
   const adminCount = await User.countDocuments({ role: 'admin' });
 
   const isComplete = Boolean(company && company.isSetupComplete && adminCount > 0);
-  return {
+  const status = {
     isSetupComplete: isComplete,
     companyName: company?.name,
   };
+
+  if (isComplete) {
+    cachedSetupStatus = status;
+  }
+
+  return status;
 };
 
 export const initializeCompanyAndAdmin = async (data: {
@@ -144,6 +160,7 @@ export const initializeCompanyAndAdmin = async (data: {
   }
 
   const token = generateToken(admin);
+  cachedSetupStatus = { isSetupComplete: true, companyName: company.name };
 
   return {
     company,
@@ -298,6 +315,7 @@ export const registerCompanyAndAdmin = async (data: RegisterCompanyData) => {
 
     // 7. Generate JWT Token
     const token = generateToken(createdAdmin);
+    cachedSetupStatus = { isSetupComplete: true, companyName: createdCompany.name };
 
     return {
       company: {
