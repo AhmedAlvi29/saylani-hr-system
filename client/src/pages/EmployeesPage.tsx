@@ -47,9 +47,19 @@ export const EmployeesPage: React.FC = () => {
   const [selectedEmployee360, setSelectedEmployee360] = useState<any>(null);
   const [createdLoginCreds, setCreatedLoginCreds] = useState<any>(null);
 
+  // Helper to generate cryptographically secure employee codes
+  const generateEmployeeCode = (): string => {
+    const array = new Uint32Array(1);
+    if (typeof window !== 'undefined' && window.crypto) {
+      window.crypto.getRandomValues(array);
+      return `EMP-${100 + (array[0] % 900)}`;
+    }
+    return `EMP-${Date.now().toString().slice(-3)}`;
+  };
+
   // Add Employee Form
   const [formData, setFormData] = useState({
-    employeeCode: 'EMP-' + Math.floor(100 + Math.random() * 900),
+    employeeCode: generateEmployeeCode(),
     firstName: '',
     lastName: '',
     email: '',
@@ -235,7 +245,7 @@ export const EmployeesPage: React.FC = () => {
             <button
               onClick={() => {
                 setFormData({
-                  employeeCode: 'EMP-' + Math.floor(100 + Math.random() * 900),
+                  employeeCode: generateEmployeeCode(),
                   firstName: '',
                   lastName: '',
                   email: '',

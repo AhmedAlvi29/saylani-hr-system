@@ -12,8 +12,10 @@ import {
 } from '../services/authService';
 import { authenticate } from '../middleware/auth';
 import { logAudit } from '../middleware/audit';
+import { authLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(authLimiter);
 
 // Setup status check
 router.get('/setup/status', async (req: Request, res: Response, next) => {

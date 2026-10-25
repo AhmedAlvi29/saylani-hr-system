@@ -10,13 +10,18 @@ export const getOrCreateLeaveBalance = async (
   year: number = new Date().getFullYear(),
   companyId?: string
 ): Promise<ILeaveBalance> => {
-  let balance = await LeaveBalance.findOne({ employeeId, year });
+  const cleanEmployeeId = String(employeeId).trim();
+  if (!/^[0-9a-fA-F]{24}$/.test(cleanEmployeeId)) {
+    throw new Error('Invalid employee ID format.');
+  }
+  const cleanYear = Number(year) || new Date().getFullYear();
+  let balance = await LeaveBalance.findOne({ employeeId: cleanEmployeeId, year: cleanYear });
   if (!balance) {
-    const emp = await Employee.findById(employeeId);
+    const emp = await Employee.findById(cleanEmployeeId);
     balance = await LeaveBalance.create({
-      companyId: companyId || emp?.companyId,
-      employeeId,
-      year,
+      companyId: companyId ? String(companyId) : emp?.companyId,
+      employeeId: cleanEmployeeId,
+      year: cleanYear,
       annualQuota: 14,
       sickQuota: 8,
       casualQuota: 10,
@@ -87,11 +92,20 @@ export const applyForLeave = async (params: {
   reason: string;
   companyId?: string;
 }) => {
-  const employee = await Employee.findById(params.employeeId);
-  const compId = params.companyId || employee?.companyId?.toString();
+  const cleanEmployeeId = String(params.employeeId).trim();
+  if (!/^[0-9a-fA-F]{24}$/.test(cleanEmployeeId)) {
+    const error: any = new Error('Invalid employee ID format.');
+    error.statusCode = 400;
+    throw error;
+  }
+  const cleanStartDate = String(params.startDate).trim();
+  const cleanEndDate = String(params.endDate).trim();
+
+  const employee = await Employee.findById(cleanEmployeeId);
+  const compId = params.companyId ? String(params.companyId) : employee?.companyId?.toString();
 
   // 1. Calculate working days
-  const { workingDays } = await calculateWorkingDays(params.startDate, params.endDate, compId);
+  const { workingDays } = await calculateWorkingDays(cleanStartDate, cleanEndDate, compId);
   if (workingDays <= 0) {
     const error: any = new Error(
       'The selected date range contains only weekends or public holidays (0 working days).'
@@ -102,10 +116,10 @@ export const applyForLeave = async (params: {
 
   // 2. Prevent overlapping leaves
   const existingOverlap = await LeaveRequest.findOne({
-    employeeId: params.employeeId,
+    employeeId: cleanEmployeeId,
     status: { $in: ['pending', 'approved'] },
     $or: [
-      { startDate: { $lte: params.endDate }, endDate: { $gte: params.startDate } },
+      { startDate: { $lte: cleanEndDate }, endDate: { $gte: cleanStartDate } },
     ],
   });
 
@@ -118,8 +132,8 @@ export const applyForLeave = async (params: {
   }
 
   // 3. Balance verification
-  const year = new Date(params.startDate).getFullYear();
-  const balance = await getOrCreateLeaveBalance(params.employeeId, year, compId);
+  const year = new Date(cleanStartDate).getFullYear();
+  const balance = await getOrCreateLeaveBalance(cleanEmployeeId, year, compId);
 
   if (params.leaveType !== 'unpaid') {
     let availableQuota = 0;
@@ -214,7 +228,14 @@ export const reviewLeaveRequest = async (params: {
 };
 
 export const cancelLeaveRequest = async (requestId: string, employeeId: string) => {
-  const request = await LeaveRequest.findOne({ _id: requestId, employeeId });
+  const cleanReqId = String(requestId).trim();
+  const cleanEmpId = String(employeeId).trim();
+  if (!/^[0-9a-fA-F]{24}$/.test(cleanReqId) || !/^[0-9a-fA-F]{24}$/.test(cleanEmpId)) {
+    const error: any = new Error('Invalid request or employee ID format.');
+    error.statusCode = 400;
+    throw error;
+  }
+  const request = await LeaveRequest.findOne({ _id: cleanReqId, employeeId: cleanEmpId });
   if (!request) {
     const error: any = new Error('Leave request not found.');
     error.statusCode = 404;

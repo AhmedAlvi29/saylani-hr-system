@@ -9,8 +9,10 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { logAudit } from '../middleware/audit';
 import { hashPassword } from '../services/authService';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(apiLimiter);
 
 // Company Settings
 router.get('/org/settings', authenticate, async (req: Request, res: Response, next) => {
@@ -185,8 +187,13 @@ router.post('/org/holidays', authenticate, requireRole('admin'), async (req: Req
 
 router.delete('/org/holidays/:id', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const filter: any = { _id: req.params.id };
-    if (req.user?.companyId) filter.companyId = req.user.companyId;
+    const id = String(req.params.id).trim();
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      res.status(400).json({ success: false, message: 'Invalid holiday ID format.' });
+      return;
+    }
+    const filter: any = { _id: id };
+    if (req.user?.companyId) filter.companyId = String(req.user.companyId);
 
     const holiday = await Holiday.findOneAndDelete(filter);
     if (!holiday) {
@@ -197,7 +204,7 @@ router.delete('/org/holidays/:id', authenticate, requireRole('admin'), async (re
     await logAudit(req, {
       action: 'DELETE_HOLIDAY',
       entity: 'Holiday',
-      entityId: req.params.id,
+      entityId: id,
       details: `Deleted holiday ${holiday.name}`,
     });
 
@@ -264,8 +271,13 @@ router.post('/org/users', authenticate, requireRole('admin'), async (req: Reques
 
 router.patch('/org/users/:id/toggle', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const filter: any = { _id: req.params.id };
-    if (req.user?.companyId) filter.companyId = req.user.companyId;
+    const id = String(req.params.id).trim();
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      res.status(400).json({ success: false, message: 'Invalid user ID format.' });
+      return;
+    }
+    const filter: any = { _id: id };
+    if (req.user?.companyId) filter.companyId = String(req.user.companyId);
 
     const user = await User.findOne(filter);
     if (!user) {
@@ -296,8 +308,13 @@ router.post('/org/users/:id/reset-password', authenticate, requireRole('admin'),
     });
     const { newPassword } = schema.parse(req.body);
 
-    const filter: any = { _id: req.params.id };
-    if (req.user?.companyId) filter.companyId = req.user.companyId;
+    const id = String(req.params.id).trim();
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      res.status(400).json({ success: false, message: 'Invalid user ID format.' });
+      return;
+    }
+    const filter: any = { _id: id };
+    if (req.user?.companyId) filter.companyId = String(req.user.companyId);
 
     const user = await User.findOne(filter);
     if (!user) {

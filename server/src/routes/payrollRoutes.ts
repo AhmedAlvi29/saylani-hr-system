@@ -8,8 +8,10 @@ import { generatePayslipPdfBuffer } from '../services/pdfService';
 import { authenticate } from '../middleware/auth';
 import { requireRole, enforceDataScope } from '../middleware/rbac';
 import { logAudit } from '../middleware/audit';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(apiLimiter);
 
 // Generate Monthly Payroll Draft (HR or Admin)
 const draftSchema = z.object({
@@ -58,9 +60,13 @@ router.get('/payroll/runs', authenticate, requireRole('admin', 'hr'), async (req
 // Get Single Payroll Run Details and Payslips (HR & Admin)
 router.get('/payroll/runs/:month', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
-    const month = req.params.month;
+    const month = String(req.params.month).trim();
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).json({ success: false, message: 'Invalid month format (YYYY-MM).' });
+      return;
+    }
     const filter: any = { month };
-    if (req.user?.companyId) filter.companyId = req.user.companyId;
+    if (req.user?.companyId) filter.companyId = String(req.user.companyId);
 
     const run = await PayrollRun.findOne(filter)
       .populate('generatedBy', 'name email')
@@ -97,7 +103,11 @@ router.get('/payroll/runs/:month', authenticate, requireRole('admin', 'hr'), asy
 // Finalize & Lock Monthly Payroll (Admin ONLY!)
 router.post('/payroll/runs/:month/finalize', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const month = req.params.month;
+    const month = String(req.params.month).trim();
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).json({ success: false, message: 'Invalid month format (YYYY-MM).' });
+      return;
+    }
     const run = await finalizePayroll(month, req.user!.id, req.user?.companyId);
 
     await logAudit(req, {
@@ -121,8 +131,8 @@ router.post('/payroll/runs/:month/finalize', authenticate, requireRole('admin'),
 // Get My Payslips (Employee Self-Service)
 router.get('/payroll/my-payslips', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const employeeId = req.user?.employeeId;
-    if (!employeeId) {
+    const employeeId = req.user?.employeeId ? String(req.user.employeeId).trim() : undefined;
+    if (!employeeId || !/^[0-9a-fA-F]{24}$/.test(employeeId)) {
       res.json({ success: true, data: [] });
       return;
     }
@@ -143,7 +153,12 @@ router.get('/payroll/my-payslips', authenticate, async (req: Request, res: Respo
 // Download Official PDF Payslip
 router.get('/payroll/payslip/:id/pdf', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const payslip = await Payslip.findById(req.params.id);
+    const id = String(req.params.id).trim();
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      res.status(400).json({ success: false, message: 'Invalid payslip ID.' });
+      return;
+    }
+    const payslip = await Payslip.findById(id);
     if (!payslip) {
       res.status(404).json({ success: false, message: 'Payslip not found.' });
       return;

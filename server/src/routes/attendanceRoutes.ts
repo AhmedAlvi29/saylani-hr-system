@@ -12,8 +12,10 @@ import {
 import { authenticate } from '../middleware/auth';
 import { requireRole, enforceDataScope } from '../middleware/rbac';
 import { logAudit } from '../middleware/audit';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(apiLimiter);
 
 // Check-in (Web or Camera + Location)
 router.post('/attendance/check-in', authenticate, async (req: Request, res: Response, next) => {
@@ -105,10 +107,15 @@ router.get('/attendance/today', authenticate, async (req: Request, res: Response
 });
 
 // Daily Attendance Board (Admin & HR)
+const attendanceBoardQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format must be YYYY-MM-DD').optional(),
+  departmentId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid department ID').optional(),
+});
+
 router.get('/attendance/board', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
-    const { date, departmentId } = req.query;
-    const board = await getDailyAttendanceBoard(date as string, departmentId as string, req.user?.companyId);
+    const query = attendanceBoardQuerySchema.parse(req.query);
+    const board = await getDailyAttendanceBoard(query.date, query.departmentId, req.user?.companyId);
     res.json({ success: true, data: board });
   } catch (error) {
     next(error);
@@ -116,25 +123,33 @@ router.get('/attendance/board', authenticate, requireRole('admin', 'hr'), async 
 });
 
 // Attendance History (Calendar / List View)
+const attendanceHistoryQuerySchema = z.object({
+  employeeId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid employee ID').optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+  month: z.string().regex(/^\d{4}-\d{2}$/, 'Invalid month format (YYYY-MM)').optional(),
+});
+
 router.get('/attendance/history', authenticate, enforceDataScope, async (req: Request, res: Response, next) => {
   try {
-    const { employeeId, startDate, endDate, month } = req.query;
+    const query = attendanceHistoryQuerySchema.parse(req.query);
 
     const filter: any = {};
     if (req.user?.companyId) {
-      filter.companyId = req.user.companyId;
+      filter.companyId = String(req.user.companyId);
     }
 
     if (req.user?.role === 'employee') {
-      filter.employeeId = req.user.employeeId;
-    } else if (employeeId) {
-      filter.employeeId = employeeId;
+      filter.employeeId = String(req.user.employeeId);
+    } else if (query.employeeId) {
+      filter.employeeId = String(query.employeeId);
     }
 
-    if (month) {
-      filter.date = { $regex: `^${month}` };
-    } else if (startDate && endDate) {
-      filter.date = { $gte: startDate, $lte: endDate };
+    if (query.month) {
+      const safeMonth = query.month.replace(/[^0-9-]/g, '');
+      filter.date = { $regex: `^${safeMonth}` };
+    } else if (query.startDate && query.endDate) {
+      filter.date = { $gte: String(query.startDate), $lte: String(query.endDate) };
     }
 
     const records = await Attendance.find(filter)

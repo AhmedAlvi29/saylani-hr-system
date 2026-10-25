@@ -33,7 +33,14 @@ export const enforceDataScope = (req: Request, res: Response, next: NextFunction
 
   // Employee role can ONLY access their own records
   if (req.user.role === 'employee') {
-    const requestedEmployeeId = req.params.employeeId || req.query.employeeId || req.body.employeeId;
+    const rawTarget =
+      typeof req.params.employeeId === 'string'
+        ? req.params.employeeId
+        : typeof req.body?.employeeId === 'string'
+        ? req.body.employeeId
+        : typeof req.query?.employeeId === 'string'
+        ? req.query.employeeId
+        : undefined;
 
     if (!req.user.employeeId) {
       res.status(403).json({
@@ -44,7 +51,7 @@ export const enforceDataScope = (req: Request, res: Response, next: NextFunction
     }
 
     // If an employeeId is explicitly targeted, ensure it strictly matches the logged in user's employeeId
-    if (requestedEmployeeId && requestedEmployeeId.toString() !== req.user.employeeId.toString()) {
+    if (rawTarget && String(rawTarget) !== String(req.user.employeeId)) {
       res.status(403).json({
         success: false,
         message: 'Access denied: You are only authorized to view and manage your own employee records.',
@@ -54,10 +61,10 @@ export const enforceDataScope = (req: Request, res: Response, next: NextFunction
 
     // Automatically enforce own employeeId on queries & mutations
     if (req.query) {
-      req.query.employeeId = req.user.employeeId;
+      req.query.employeeId = String(req.user.employeeId);
     }
     if (req.body && req.body.employeeId) {
-      req.body.employeeId = req.user.employeeId;
+      req.body.employeeId = String(req.user.employeeId);
     }
   }
 

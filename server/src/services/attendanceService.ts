@@ -21,12 +21,18 @@ export const checkInEmployee = async (params: {
   faceVerified?: boolean;
   companyId?: string;
 }) => {
+  const cleanEmployeeId = String(params.employeeId).trim();
+  if (!/^[0-9a-fA-F]{24}$/.test(cleanEmployeeId)) {
+    const error: any = new Error('Invalid employee ID format.');
+    error.statusCode = 400;
+    throw error;
+  }
   const todayStr = getTodayDateString();
   const now = new Date();
 
   // 1. Check for duplicate check-in today
   const existingRecord = await Attendance.findOne({
-    employeeId: params.employeeId,
+    employeeId: cleanEmployeeId,
     date: todayStr,
   });
 
@@ -37,8 +43,8 @@ export const checkInEmployee = async (params: {
   }
 
   // 2. Fetch employee & company settings for timing & geofence
-  const employee = await Employee.findById(params.employeeId);
-  const companyId = params.companyId || employee?.companyId?.toString();
+  const employee = await Employee.findById(cleanEmployeeId);
+  const companyId = params.companyId ? String(params.companyId) : employee?.companyId?.toString();
   const company = companyId ? await Company.findById(companyId) : await Company.findOne();
   const officeStartTime = company?.officeStartTime || '09:00';
   const graceMinutes = company?.graceMinutes ?? 15;
@@ -100,7 +106,7 @@ export const checkInEmployee = async (params: {
 
   const attendance = await Attendance.create({
     companyId: company?._id || employee?.companyId,
-    employeeId: params.employeeId,
+    employeeId: cleanEmployeeId,
     date: todayStr,
     checkInTime: now,
     status: initialStatus,
@@ -120,11 +126,17 @@ export const checkOutEmployee = async (params: {
   notes?: string;
   companyId?: string;
 }) => {
+  const cleanEmployeeId = String(params.employeeId).trim();
+  if (!/^[0-9a-fA-F]{24}$/.test(cleanEmployeeId)) {
+    const error: any = new Error('Invalid employee ID format.');
+    error.statusCode = 400;
+    throw error;
+  }
   const todayStr = getTodayDateString();
   const now = new Date();
 
   const record = await Attendance.findOne({
-    employeeId: params.employeeId,
+    employeeId: cleanEmployeeId,
     date: todayStr,
   });
 
@@ -162,17 +174,20 @@ export const checkOutEmployee = async (params: {
 };
 
 export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: string, companyId?: string) => {
-  const targetDate = dateStr || getTodayDateString();
+  const safeDateStr = typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? dateStr
+    : getTodayDateString();
+  const targetDate = safeDateStr;
 
   // Find all active/probation employees
   const employeeFilter: any = {
     employmentStatus: { $in: ['active', 'probation'] },
   };
   if (companyId) {
-    employeeFilter.companyId = companyId;
+    employeeFilter.companyId = String(companyId);
   }
-  if (departmentId) {
-    employeeFilter.departmentId = departmentId;
+  if (departmentId && /^[0-9a-fA-F]{24}$/.test(String(departmentId))) {
+    employeeFilter.departmentId = String(departmentId);
   }
 
   const employees = await Employee.find(employeeFilter)
@@ -182,7 +197,7 @@ export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: s
 
   // Find all attendance records for targetDate
   const attFilter: any = { date: targetDate };
-  if (companyId) attFilter.companyId = companyId;
+  if (companyId) attFilter.companyId = String(companyId);
   const attendanceRecords = await Attendance.find(attFilter).lean();
   const attendanceMap = new Map<string, any>();
   attendanceRecords.forEach((att) => {
@@ -195,7 +210,7 @@ export const getDailyAttendanceBoard = async (dateStr?: string, departmentId?: s
     startDate: { $lte: targetDate },
     endDate: { $gte: targetDate },
   };
-  if (companyId) leaveFilter.companyId = companyId;
+  if (companyId) leaveFilter.companyId = String(companyId);
   const approvedLeaves = await LeaveRequest.find(leaveFilter).lean();
   const leaveMap = new Map<string, any>();
   approvedLeaves.forEach((leave) => {
@@ -254,18 +269,25 @@ export const requestCorrection = async (params: {
   requestedCheckOut?: Date;
   reason: string;
 }) => {
+  const cleanEmployeeId = String(params.employeeId).trim();
+  if (!/^[0-9a-fA-F]{24}$/.test(cleanEmployeeId)) {
+    const error: any = new Error('Invalid employee ID format.');
+    error.statusCode = 400;
+    throw error;
+  }
+  const cleanDate = String(params.date).trim();
   let record = await Attendance.findOne({
-    employeeId: params.employeeId,
-    date: params.date,
+    employeeId: cleanEmployeeId,
+    date: cleanDate,
   });
 
   if (!record) {
     // Create placeholder attendance record if none exists
-    const emp = await Employee.findById(params.employeeId);
+    const emp = await Employee.findById(cleanEmployeeId);
     record = new Attendance({
       companyId: emp?.companyId,
-      employeeId: params.employeeId,
-      date: params.date,
+      employeeId: cleanEmployeeId,
+      date: cleanDate,
       status: 'absent',
       checkInSource: 'web',
     });
@@ -288,7 +310,13 @@ export const reviewCorrection = async (params: {
   action: 'approved' | 'rejected';
   comment?: string;
 }) => {
-  const record = await Attendance.findById(params.attendanceId);
+  const cleanAttId = String(params.attendanceId).trim();
+  if (!/^[0-9a-fA-F]{24}$/.test(cleanAttId)) {
+    const error: any = new Error('Invalid attendance ID format.');
+    error.statusCode = 400;
+    throw error;
+  }
+  const record = await Attendance.findById(cleanAttId);
   if (!record) {
     const error: any = new Error('Attendance record not found.');
     error.statusCode = 404;

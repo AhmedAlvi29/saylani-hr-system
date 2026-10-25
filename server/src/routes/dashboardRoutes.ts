@@ -6,8 +6,10 @@ import {
 } from '../services/dashboardService';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(apiLimiter);
 
 // Admin Dashboard
 router.get('/dashboard/admin', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {

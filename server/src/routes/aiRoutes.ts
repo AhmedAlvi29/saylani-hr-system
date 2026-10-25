@@ -7,8 +7,10 @@ import {
 } from '../services/aiService';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
+import { aiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(aiLimiter);
 
 // AI Assistant Chat with Tool Calling & Role Security
 const chatSchema = z.object({

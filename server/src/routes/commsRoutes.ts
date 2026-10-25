@@ -6,8 +6,10 @@ import { AuditLog } from '../models/AuditLog';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { logAudit } from '../middleware/audit';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(apiLimiter);
 
 // Announcements: List
 router.get('/comms/announcements', authenticate, async (req: Request, res: Response, next) => {
@@ -97,18 +99,29 @@ router.patch('/comms/notifications/read-all', authenticate, async (req: Request,
 });
 
 // Audit Log: List & Filter (Admin ONLY!)
+const auditLogQuerySchema = z.object({
+  action: z.string().trim().max(100).optional(),
+  entity: z.string().trim().max(100).optional(),
+  actorEmail: z.string().trim().max(200).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  page: z.coerce.number().int().min(1).default(1),
+});
+
 router.get('/comms/audit-logs', authenticate, requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
-    const { action, entity, actorEmail, limit = 50, page = 1 } = req.query;
+    const query = auditLogQuerySchema.parse(req.query);
 
     const filter: any = {};
-    if (req.user?.companyId) filter.companyId = req.user.companyId;
-    if (action) filter.action = action;
-    if (entity) filter.entity = entity;
-    if (actorEmail) filter.actorEmail = { $regex: actorEmail, $options: 'i' };
+    if (req.user?.companyId) filter.companyId = String(req.user.companyId);
+    if (query.action) filter.action = String(query.action);
+    if (query.entity) filter.entity = String(query.entity);
+    if (query.actorEmail) {
+      const safeEmail = String(query.actorEmail).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.actorEmail = { $regex: safeEmail, $options: 'i' };
+    }
 
-    const pageNum = Math.max(1, parseInt(page as string, 10));
-    const pageSize = Math.min(200, Math.max(1, parseInt(limit as string, 10)));
+    const pageNum = query.page;
+    const pageSize = query.limit;
     const skip = (pageNum - 1) * pageSize;
 
     const [total, logs] = await Promise.all([

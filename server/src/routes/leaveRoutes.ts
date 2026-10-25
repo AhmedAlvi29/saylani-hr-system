@@ -11,18 +11,21 @@ import {
 import { authenticate } from '../middleware/auth';
 import { requireRole, enforceDataScope } from '../middleware/rbac';
 import { logAudit } from '../middleware/audit';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(apiLimiter);
 
 // Calculate Working Days preview (helper for UI form)
+const calculateDaysSchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid startDate format'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid endDate format'),
+});
+
 router.get('/leaves/calculate-days', authenticate, async (req: Request, res: Response, next) => {
   try {
-    const { startDate, endDate } = req.query;
-    if (!startDate || !endDate) {
-      res.status(400).json({ success: false, message: 'startDate and endDate are required.' });
-      return;
-    }
-    const result = await calculateWorkingDays(startDate as string, endDate as string, req.user?.companyId);
+    const { startDate, endDate } = calculateDaysSchema.parse(req.query);
+    const result = await calculateWorkingDays(startDate, endDate, req.user?.companyId ? String(req.user.companyId) : undefined);
     res.json({ success: true, data: result });
   } catch (error) {
     next(error);
@@ -94,16 +97,24 @@ router.get('/leaves/my-history', authenticate, async (req: Request, res: Respons
 });
 
 // Get Leave Balance
+const leaveBalanceQuerySchema = z.object({
+  employeeId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid employee ID').optional(),
+  year: z.coerce.number().int().min(2000).max(2100).optional(),
+});
+
 router.get('/leaves/balance', authenticate, enforceDataScope, async (req: Request, res: Response, next) => {
   try {
-    const employeeId = req.user?.role === 'employee' ? req.user.employeeId : req.query.employeeId || req.user?.employeeId;
-    if (!employeeId) {
-      res.status(400).json({ success: false, message: 'Employee ID is required.' });
+    const query = leaveBalanceQuerySchema.parse(req.query);
+    const candidateId = req.user?.role === 'employee' ? req.user.employeeId : (query.employeeId || req.user?.employeeId);
+
+    if (!candidateId || !/^[0-9a-fA-F]{24}$/.test(String(candidateId))) {
+      res.status(400).json({ success: false, message: 'Valid employee ID is required.' });
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string, 10) : new Date().getFullYear();
-    const balance = await getOrCreateLeaveBalance(employeeId as string, year, req.user?.companyId);
+    const employeeId = String(candidateId);
+    const year = query.year || new Date().getFullYear();
+    const balance = await getOrCreateLeaveBalance(employeeId, year, req.user?.companyId ? String(req.user.companyId) : undefined);
 
     res.json({
       success: true,
@@ -123,13 +134,18 @@ router.get('/leaves/balance', authenticate, enforceDataScope, async (req: Reques
 });
 
 // Review Inbox: List All Leave Requests (HR & Admin)
+const leaveRequestsQuerySchema = z.object({
+  status: z.enum(['pending', 'approved', 'rejected', 'cancelled']).optional(),
+  leaveType: z.enum(['annual', 'sick', 'casual', 'unpaid']).optional(),
+});
+
 router.get('/leaves/requests', authenticate, requireRole('admin', 'hr'), async (req: Request, res: Response, next) => {
   try {
-    const { status, leaveType } = req.query;
+    const query = leaveRequestsQuerySchema.parse(req.query);
     const filter: any = {};
-    if (req.user?.companyId) filter.companyId = req.user.companyId;
-    if (status) filter.status = status;
-    if (leaveType) filter.leaveType = leaveType;
+    if (req.user?.companyId) filter.companyId = String(req.user.companyId);
+    if (query.status) filter.status = String(query.status);
+    if (query.leaveType) filter.leaveType = String(query.leaveType);
 
     const requests = await LeaveRequest.find(filter)
       .populate('employeeId', 'firstName lastName employeeCode departmentId')

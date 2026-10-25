@@ -12,13 +12,23 @@ import { requireRole, enforceDataScope } from '../middleware/rbac';
 import { logAudit } from '../middleware/audit';
 import { hashPassword } from '../services/authService';
 import { getOrCreateLeaveBalance } from '../services/leaveService';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+router.use(apiLimiter);
 
 // Employee Directory with Search, Filter & Pagination
+const getEmployeesQuerySchema = z.object({
+  search: z.string().max(100).optional(),
+  department: z.string().max(100).optional(),
+  status: z.enum(['active', 'probation', 'notice', 'suspended', 'leaver']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 router.get('/employees', authenticate, enforceDataScope, async (req: Request, res: Response, next) => {
   try {
-    const { search, department, status, page = 1, limit = 20 } = req.query;
+    const { search, department, status, page, limit } = getEmployeesQuerySchema.parse(req.query);
 
     const query: any = {};
     if (req.user?.companyId) {
@@ -29,20 +39,21 @@ router.get('/employees', authenticate, enforceDataScope, async (req: Request, re
     if (req.user?.role === 'employee') {
       query._id = req.user.employeeId;
     } else {
-      if (department) query.departmentId = department;
+      if (department) query.departmentId = String(department);
       if (status) query.employmentStatus = status;
       if (search) {
+        const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         query.$or = [
-          { firstName: { $regex: search, $options: 'i' } },
-          { lastName: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { employeeCode: { $regex: search, $options: 'i' } },
+          { firstName: { $regex: safeSearch, $options: 'i' } },
+          { lastName: { $regex: safeSearch, $options: 'i' } },
+          { email: { $regex: safeSearch, $options: 'i' } },
+          { employeeCode: { $regex: safeSearch, $options: 'i' } },
         ];
       }
     }
 
-    const pageNum = Math.max(1, parseInt(page as string, 10));
-    const pageSize = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
+    const pageNum = page;
+    const pageSize = limit;
     const skip = (pageNum - 1) * pageSize;
 
     const [total, employees] = await Promise.all([
@@ -75,10 +86,10 @@ router.get('/employees', authenticate, enforceDataScope, async (req: Request, re
 // Employee 360 Profile
 router.get('/employees/:id', authenticate, enforceDataScope, async (req: Request, res: Response, next) => {
   try {
-    const employeeId = req.params.id;
+    const employeeId = z.string().regex(/^[0-9a-fA-F]{24}$/).parse(req.params.id);
 
     // Strict scope check
-    if (req.user?.role === 'employee' && req.user.employeeId !== employeeId) {
+    if (req.user?.role === 'employee' && req.user.employeeId?.toString() !== employeeId) {
       res.status(403).json({ success: false, message: 'Forbidden: You can only view your own profile.' });
       return;
     }
@@ -229,9 +240,9 @@ router.post('/employees', authenticate, requireRole('admin', 'hr'), async (req: 
 // Update Employee Details
 router.put('/employees/:id', authenticate, enforceDataScope, async (req: Request, res: Response, next) => {
   try {
-    const employeeId = req.params.id;
+    const employeeId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid employee ID').parse(req.params.id);
     const filter: any = { _id: employeeId };
-    if (req.user?.companyId) filter.companyId = req.user.companyId;
+    if (req.user?.companyId) filter.companyId = String(req.user.companyId);
 
     const employee = await Employee.findOne(filter);
     if (!employee) {
@@ -327,7 +338,7 @@ router.post('/employees/import-csv', authenticate, requireRole('admin', 'hr'), a
       if (!row.firstName) errors.push({ row: rowNum, field: 'firstName', reason: 'Missing first name.' });
       if (!row.lastName) errors.push({ row: rowNum, field: 'lastName', reason: 'Missing last name.' });
       if (!row.email) errors.push({ row: rowNum, field: 'email', reason: 'Missing email.' });
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+      else if (!z.string().email().safeParse(row.email).success) {
         errors.push({ row: rowNum, field: 'email', reason: 'Invalid email format.' });
       }
 
